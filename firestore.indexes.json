@@ -1,0 +1,27 @@
+{
+    "indexes": [
+        {
+            "collectionGroup": "scores",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "kelasKategori",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "tipeOperasi",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "skor",
+                    "order": "DESCENDING"
+                },
+                {
+                    "fieldPath": "waktuRataRata",
+                    "order": "ASCENDING"
+                }
+            ]
+        }
+    ],
+    "fieldOverrides": []
+}
