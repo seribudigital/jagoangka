@@ -12,35 +12,41 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Tailwind Static CSS -->
     <link rel="stylesheet" href="main.css?v=3">
+    <link rel="icon" href="assets/fav.svg" type="image/svg+xml">
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
 </head>
 
-<body style="background-color: #0f172a;"
-    class="bg-brand-dark text-white font-sans min-h-screen overflow-x-hidden selection:bg-brand-accent selection:text-brand-dark">
+<body
+    class="bg-brand-dark text-brand-text font-sans min-h-screen overflow-x-hidden selection:bg-brand-accent selection:text-brand-dark transition-colors duration-300">
+
+    <!-- Shared Import Map -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+          "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+          "firebase/analytics": "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js",
+          "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"
+        }
+      }
+    </script>
 
     <!-- Background Elements -->
-    <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden transform-gpu" style="will-change: transform;">
-        <!-- Video Background (Welcome Only) -->
-        <div id="bg-video" class="absolute inset-0 transition-opacity duration-1000">
-            <video autoplay muted loop playsinline class="absolute inset-0 w-full h-full object-cover">
-                <source
-                    src="https://hujtpnndfhnxddglztdn.supabase.co/storage/v1/object/public/seribudigital/jagoangka.mp4"
-                    type="video/mp4">
-            </video>
-            <!-- Using inline style for stronger opacity (80%) to improve contrast -->
-            <div class="absolute inset-0" style="background-color: rgba(0, 0, 0, 0.8);"></div>
-        </div>
-
-        <!-- Default Static Background (Other Screens) -->
-        <div id="bg-default" class="absolute inset-0 opacity-0 transition-opacity duration-1000 pointer-events-none">
-            <div
-                class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-primary/20 rounded-full blur-[100px] opacity-50">
-            </div>
-            <div
-                class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-brand-secondary/20 rounded-full blur-[100px] opacity-50">
-            </div>
-        </div>
+    <div class="fixed inset-0 pointer-events-none overflow-hidden" style="z-index: -1;">
+        <canvas id="bg-canvas" class="absolute inset-0 w-full h-full"></canvas>
     </div>
 
     <!-- Main Container -->
@@ -49,39 +55,161 @@
 
         <!-- HEADER (Visible everywhere except Welcome?) -->
         <header id="app-header" class="hidden absolute top-0 left-0 w-full p-6 flex justify-between items-center z-50">
-            <div class="flex flex-col">
-                <h1
-                    class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-accent to-brand-primary">
-                    Jago Angka
-                </h1>
-                <p id="user-greeting" class="text-sm text-slate-400">Halo, Siswa</p>
+            <div class="flex items-center gap-3">
+                <img src="assets/fav.svg" alt="Logo Jago Angka" class="w-10 h-10">
+                <div class="flex flex-col">
+                    <h1
+                        class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-accent to-brand-primary">
+                        Jago Angka
+                    </h1>
+                    <p id="user-greeting" class="text-sm text-brand-text-muted">Halo, Siswa</p>
+                </div>
             </div>
-            <button id="btn-history" aria-label="Riwayat Belajar"
-                class="p-2 bg-brand-surface/50 hover:bg-brand-surface rounded-full border border-slate-700/50 backdrop-blur transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-brand-accent" fill="none"
-                    viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                </svg>
-            </button>
+
+            <div class="flex items-center gap-2">
+                <!-- THEME TOGGLE -->
+                <button id="btn-theme-toggle" aria-label="Ganti Tema"
+                    class="p-2 bg-brand-surface/50 hover:bg-brand-surface rounded-full border border-brand-border/50 backdrop-blur transition-all text-brand-text-muted hover:text-brand-text">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                </button>
+
+                <!-- MUTE TOGGLE (New) -->
+                <button id="btn-sound-toggle" aria-label="Suara Hidup/Mati"
+                    class="p-2 bg-brand-surface/50 hover:bg-brand-surface rounded-full border border-brand-border/50 backdrop-blur transition-all text-brand-text-muted hover:text-brand-text">
+                    <!-- Icon Speaker On (Default) -->
+                    <svg id="icon-sound-on" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                    </svg>
+                    <!-- Icon Speaker Off (Hidden) -->
+                    <svg id="icon-sound-off" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                    </svg>
+                </button>
+
+                <!-- INFO BUTTON (To See Landing Page) -->
+                <button onclick="showLanding()" aria-label="Tentang Jago Angka"
+                    class="p-2 bg-brand-surface/50 hover:bg-brand-surface rounded-full border border-brand-border/50 backdrop-blur transition-all text-brand-text-muted hover:text-brand-text">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </button>
+
+                <button id="btn-history" aria-label="Riwayat Belajar"
+                    class="p-2 bg-brand-surface/50 hover:bg-brand-surface rounded-full border border-brand-border/50 backdrop-blur transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-brand-accent" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                    </svg>
+                </button>
+            </div>
         </header>
 
         <!-- SCREENS -->
 
+        <!-- 0. LANDING SCREEN (New) -->
+        <section id="screen-landing"
+            class="hidden w-full max-w-5xl flex flex-col lg:flex-row items-center justify-center gap-8 md:gap-12 p-4 animate-fade-in relative z-20">
+
+            <!-- LEFT (was RIGHT) Column: Hero Image -->
+            <div class="flex-1 w-full md:w-1/2 flex justify-center order-first">
+                <img src="https://hujtpnndfhnxddglztdn.supabase.co/storage/v1/object/public/seribudigital/herojagoangka.webp"
+                    alt="Ilustrasi Jago Angka"
+                    class="w-full max-w-md rounded-3xl shadow-2xl border border-brand-border/50 transform hover:scale-[1.02] transition-transform duration-500">
+            </div>
+
+            <!-- RIGHT (was LEFT) Column: Copywriting -->
+            <div
+                class="flex-1 w-full md:w-1/2 glass-effect border border-brand-border/50 p-6 md:p-8 rounded-3xl shadow-2xl text-brand-text-muted">
+                <h2 class="text-2xl md:text-3xl font-bold text-brand-text mb-4 leading-tight">
+                    Kenapa Kamu Harus Jadi Master Perkalian di Jago Angka?
+                </h2>
+
+                <p class="mb-4 text-sm md:text-base leading-relaxed">
+                    "Pernah nggak ngerasa otak kamu lag atau 'lemot' pas lagi ngerjain soal Aljabar yang panjang?
+                    Itu bukan karena kamu nggak bisa, tapi karena 'RAM' otak kamu penuh cuma buat mikirin hitungan dasar
+                    kayak
+                    <span class="text-brand-accent font-bold">6×9</span> atau <span
+                        class="text-brand-accent font-bold">7×8</span>."
+                </p>
+
+                <p class="mb-6 text-sm md:text-base leading-relaxed">
+                    Di Jago Angka, kita bantu kamu bikin perkalian 1-10 jadi otomatis. Kenapa ini penting banget buat
+                    siswa SMP & SMA?
+                </p>
+
+                <ul class="space-y-4 mb-6">
+                    <li class="flex gap-3 items-start">
+                        <span class="text-2xl flex-shrink-0">🚀</span>
+                        <div class="text-sm md:text-base">
+                            <strong class="text-brand-text block mb-1">Ngerjain Aljabar Jadi Sat-Set</strong>
+                            Kamu bakal lebih cepat lihat pola angka di faktorisasi atau pecahan.
+                        </div>
+                    </li>
+                    <li class="flex gap-3 items-start">
+                        <span class="text-2xl flex-shrink-0">🛡️</span>
+                        <div class="text-sm md:text-base">
+                            <strong class="text-brand-text block mb-1">Anti-Panik Saat Ujian</strong>
+                            Punya 'senjata' hitungan yang matang bikin kamu pede dan jauh dari mental block.
+                        </div>
+                    </li>
+                    <li class="flex gap-3 items-start">
+                        <span class="text-2xl flex-shrink-0">🧠</span>
+                        <div class="text-sm md:text-base">
+                            <strong class="text-brand-text block mb-1">Fokus ke Strategi</strong>
+                            Otak kamu jadi punya ruang kosong buat mikir logika yang lebih susah, bukan lagi sibuk
+                            ngitung jari.
+                        </div>
+                    </li>
+                    <li class="flex gap-3 items-start">
+                        <span class="text-2xl flex-shrink-0">🔋</span>
+                        <div class="text-sm md:text-base">
+                            <strong class="text-brand-text block mb-1">Hemat Stamina Mental</strong>
+                            Ujian itu marathon! Jangan habiskan energimu di awal cuma buat hitungan simpel yang
+                            berulang-ulang.
+                        </div>
+                    </li>
+                </ul>
+
+                <p
+                    class="font-bold text-brand-secondary text-base italic border-l-4 border-brand-secondary pl-4 py-2 bg-brand-secondary/10 rounded-r-lg mb-8">
+                    "Ayo latihan sekarang! Bukan cuma soal hafal, tapi soal bikin langkahmu di matematika jadi jauh
+                    lebih ringan!"
+                </p>
+
+                <button id="btn-landing-action" onclick="handleLandingAction()"
+                    class="w-full bg-gradient-to-r from-brand-primary to-brand-secondary hover:opacity-90 active:scale-95 text-brand-text font-bold py-4 rounded-xl shadow-lg shadow-brand-primary/25 transition-all text-xl">
+                    Mulai Belajar
+                </button>
+            </div>
+        </section>
+
         <!-- 1. WELCOME SCREEN -->
         <section id="screen-welcome"
-            class="w-full max-w-md bg-brand-surface/60 backdrop-blur-xl border border-slate-700/50 p-8 rounded-3xl shadow-2xl transform transition-all">
+            class="hidden w-full max-w-md glass-effect border border-brand-border/50 p-8 rounded-3xl shadow-2xl transform transition-all">
             <div class="text-center mb-8">
                 <div
-                    class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-2xl mb-4 shadow-lg shadow-brand-primary/25">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
+                    class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-brand-primary/20 to-brand-secondary/20 rounded-2xl mb-4 shadow-lg shadow-brand-primary/10 backdrop-blur-sm border border-brand-border/30 p-4">
+                    <img src="assets/fav.svg" alt="Logo Jago Angka" class="w-full h-full object-contain drop-shadow-md">
                 </div>
-                <h2 class="text-3xl font-bold text-white mb-2">Selamat Datang!</h2>
-                <p class="text-slate-400">Siap untuk menjadi jagoan matematika?</p>
+                <h2 class="text-3xl font-bold text-brand-text mb-2">Selamat Datang!</h2>
+                <p class="text-brand-text-muted">Siap untuk menjadi jagoan matematika?</p>
+                <!-- Back to Landing Page Button -->
+                <button onclick="showLanding()" class="mt-2 text-sm text-brand-accent hover:underline">
+                    &larr; Kembali
+                </button>
             </div>
 
             <form id="form-welcome" class="space-y-4">
@@ -89,15 +217,15 @@
                     <label for="input-name" class="block text-sm font-medium text-slate-300 mb-1 ml-1">Nama
                         Lengkap</label>
                     <input type="text" id="input-name" required placeholder="Contoh: Budi Santoso"
-                        class="w-full bg-slate-800/50 border border-slate-700 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none transition-all">
+                        class="w-full bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text placeholder-slate-500 outline-none transition-all">
                 </div>
                 <div>
                     <label for="input-class" class="block text-sm font-medium text-slate-300 mb-1 ml-1">Kelas</label>
                     <input type="text" id="input-class" required placeholder="Contoh: 7A"
-                        class="w-full bg-slate-800/50 border border-slate-700 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none transition-all">
+                        class="w-full bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text placeholder-slate-500 outline-none transition-all">
                 </div>
                 <button type="submit"
-                    class="w-full bg-gradient-to-r from-brand-primary to-brand-secondary hover:opacity-90 active:scale-95 text-white font-bold py-4 rounded-xl shadow-lg shadow-brand-primary/25 transition-all mt-6">
+                    class="w-full bg-gradient-to-r from-brand-primary to-brand-secondary hover:opacity-90 active:scale-95 text-brand-text font-bold py-4 rounded-xl shadow-lg shadow-brand-primary/25 transition-all mt-6">
                     Mulai Belajar
                 </button>
             </form>
@@ -106,9 +234,28 @@
         <!-- 2. MENU SCREEN -->
         <section id="screen-menu" class="hidden w-full max-w-4xl p-4">
             <h2
-                class="text-3xl md:text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+                class="text-3xl md:text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-brand-text to-brand-text-muted">
                 Pilih Tantanganmu
             </h2>
+
+            </h2>
+
+            <!-- Recommendation Hint (New) -->
+            <div id="recommendation-hint"
+                class="hidden mb-6 bg-brand-surface/50 border-2 border-yellow-500/50 rounded-2xl p-4 flex items-center gap-4 animate-fade-in relative overflow-hidden">
+                <div class="absolute inset-0 bg-yellow-500/5 pointer-events-none"></div>
+                <div class="p-3 bg-yellow-500/20 text-yellow-500 rounded-xl relative z-10">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <div class="relative z-10">
+                    <h3 class="font-bold text-brand-text text-lg">Rekomendasi Latihan</h3>
+                    <p class="text-sm text-brand-text-muted" id="recommendation-text">Fokus pada Perkalian 7-9 untuk
+                        meningkatkan skormu!</p>
+                </div>
+            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <!-- Perkalian -->
@@ -119,15 +266,15 @@
                     </div>
                     <div class="relative z-10 flex items-center gap-5">
                         <div
-                            class="p-4 bg-brand-primary text-white rounded-2xl shadow-lg shadow-brand-primary/30 group-hover:shadow-brand-primary/50 transition-all">
+                            class="p-4 bg-brand-primary text-brand-text rounded-2xl shadow-lg shadow-brand-primary/30 group-hover:shadow-brand-primary/50 transition-all">
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                     d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-2xl font-bold text-white mb-1">Perkalian</h3>
-                            <p class="text-slate-200 text-sm font-medium">Operasi 1 sampai 10</p>
+                            <h3 class="text-2xl font-bold text-brand-text mb-1">Perkalian</h3>
+                            <p class="text-brand-text-muted text-sm font-medium">Operasi 1 sampai 10</p>
                         </div>
                     </div>
                 </button>
@@ -140,12 +287,12 @@
                     </div>
                     <div class="relative z-10 flex items-center gap-5">
                         <div
-                            class="p-4 bg-brand-secondary text-white rounded-2xl shadow-lg shadow-brand-secondary/30 group-hover:shadow-brand-secondary/50 transition-all">
+                            class="p-4 bg-brand-secondary text-brand-text rounded-2xl shadow-lg shadow-brand-secondary/30 group-hover:shadow-brand-secondary/50 transition-all">
                             <span class="text-3xl font-bold leading-none">÷</span>
                         </div>
                         <div>
-                            <h3 class="text-2xl font-bold text-white mb-1">Pembagian</h3>
-                            <p class="text-slate-200 text-sm font-medium">Operasi kebalikan perkalian</p>
+                            <h3 class="text-2xl font-bold text-brand-text mb-1">Pembagian</h3>
+                            <p class="text-brand-text-muted text-sm font-medium">Operasi kebalikan perkalian</p>
                         </div>
                     </div>
                 </button>
@@ -165,8 +312,8 @@
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-2xl font-bold text-white mb-1">Penjumlahan</h3>
-                            <p class="text-slate-200 text-sm font-medium">Bilangan -10 sampai 10</p>
+                            <h3 class="text-2xl font-bold text-brand-text mb-1">Penjumlahan</h3>
+                            <p class="text-brand-text-muted text-sm font-medium">Bilangan -10 sampai 10</p>
                         </div>
                     </div>
                 </button>
@@ -179,15 +326,15 @@
                     </div>
                     <div class="relative z-10 flex items-center gap-5">
                         <div
-                            class="p-4 bg-indigo-500 text-white rounded-2xl shadow-lg shadow-indigo-500/30 group-hover:shadow-indigo-500/50 transition-all">
+                            class="p-4 bg-indigo-500 text-brand-text rounded-2xl shadow-lg shadow-indigo-500/30 group-hover:shadow-indigo-500/50 transition-all">
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M20 12H4">
                                 </path>
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-2xl font-bold text-white mb-1">Pengurangan</h3>
-                            <p class="text-slate-200 text-sm font-medium">Bilangan -10 sampai 10</p>
+                            <h3 class="text-2xl font-bold text-brand-text mb-1">Pengurangan</h3>
+                            <p class="text-brand-text-muted text-sm font-medium">Bilangan -10 sampai 10</p>
                         </div>
                     </div>
                 </button>
@@ -204,8 +351,8 @@
                     </svg>
                 </div>
                 <div class="relative z-10 text-left">
-                    <div class="font-bold text-white text-lg">Peringkat Juara</div>
-                    <div class="text-sm text-slate-200 font-medium">Lihat siapa yang tercepat di kelasmu!</div>
+                    <div class="font-bold text-brand-text text-lg">Peringkat Juara</div>
+                    <div class="text-sm text-brand-text-muted font-medium">Lihat siapa yang tercepat di kelasmu!</div>
                 </div>
             </button>
         </section>
@@ -215,48 +362,49 @@
             <!-- Top Bar: Progress & Score -->
             <div class="flex justify-between items-center mb-6">
                 <!-- Stop Button (for Exam) / Back Button (Normal) -->
-                <button id="btn-back-game" class="text-slate-400 hover:text-white transition-colors">
+                <button id="btn-back-game" class="text-brand-text-muted hover:text-brand-text transition-colors">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                     </svg>
                 </button>
                 <button id="btn-stop-exam"
-                    class="hidden bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-white px-3 py-1 rounded-lg text-sm font-medium transition-all">
+                    class="hidden bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-brand-text px-3 py-1 rounded-lg text-sm font-medium transition-all">
                     Stop Ujian
                 </button>
                 <div class="flex items-center gap-4">
                     <div
-                        class="bg-brand-surface/80 px-4 py-1 rounded-full border border-slate-700 text-sm font-medium text-brand-accent">
+                        class="bg-brand-surface/80 px-4 py-1 rounded-full border border-brand-border text-sm font-medium text-brand-accent">
                         Skor: <span id="game-score">0</span>
                     </div>
                     <div
-                        class="bg-brand-surface/80 px-4 py-1 rounded-full border border-slate-700 text-sm font-medium text-brand-secondary">
+                        class="bg-brand-surface/80 px-4 py-1 rounded-full border border-brand-border text-sm font-medium text-brand-secondary">
                         <span id="game-timer">00:00</span>
                     </div>
                 </div>
             </div>
 
             <!-- Exam Timer Bar -->
-            <div id="exam-timer-container" class="hidden w-full h-1 bg-slate-800 rounded-full mb-4 overflow-hidden">
+            <div id="exam-timer-container" class="hidden w-full h-1 bg-brand-surface rounded-full mb-4 overflow-hidden">
                 <div id="exam-timer-bar"
                     class="h-full bg-brand-accent transition-all duration-[50ms] ease-linear w-full"></div>
             </div>
 
             <!-- Question Area -->
             <div
-                class="flex-1 flex flex-col items-center justify-center bg-brand-surface/30 backdrop-blur-md rounded-3xl border border-slate-700/30 p-8 mb-6 relative overflow-hidden">
+                class="flex-1 flex flex-col items-center justify-center glass-effect rounded-3xl border border-brand-border/30 p-8 mb-6 relative overflow-hidden">
                 <div id="feedback-anim"
                     class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-300"></div>
 
-                <div class="text-slate-400 text-lg mb-2 uppercase tracking-widest font-bold" id="game-mode-label">
+                <div class="text-brand-text-muted text-lg mb-2 uppercase tracking-widest font-bold"
+                    id="game-mode-label">
                     Perkalian</div>
-                <div class="text-6xl md:text-7xl font-extrabold text-white mb-8 tracking-tight" id="question-text">
+                <div class="text-6xl md:text-7xl font-extrabold text-brand-text mb-8 tracking-tight" id="question-text">
                     5 x 8
                 </div>
 
                 <!-- Input Display -->
-                <div class="w-full h-20 bg-slate-900/50 rounded-2xl border-2 border-slate-700 flex items-center justify-center mb-4 transition-all"
+                <div class="w-full h-20 bg-slate-900/50 rounded-2xl border-2 border-brand-border flex items-center justify-center mb-4 transition-all"
                     id="input-display-container">
                     <span id="user-answer" class="text-4xl font-bold text-brand-accent animate-pulse"></span>
                     <span class="w-1 h-8 bg-brand-accent ml-1 animate-bounce"></span>
@@ -285,30 +433,56 @@
                 </button>
             </div>
             <button onclick="submitAnswer()"
-                class="w-full mt-4 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand-primary/25 transition-all text-xl">
+                class="w-full mt-4 bg-brand-primary hover:bg-brand-primary/90 text-brand-text font-bold py-4 rounded-2xl shadow-lg shadow-brand-primary/25 transition-all text-xl">
                 Jawab
             </button>
         </section>
 
         <!-- 4. RESULTS / HISTORY SCREEN -->
         <section id="screen-results"
-            class="hidden w-full max-w-2xl bg-brand-surface/80 backdrop-blur-xl border border-slate-700/50 p-6 md:p-8 rounded-3xl shadow-2xl h-[85vh] flex flex-col">
+            class="hidden w-full max-w-2xl glass-effect border border-brand-border/50 p-6 md:p-8 rounded-3xl shadow-2xl h-[85vh] flex flex-col">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-white">Riwayat Belajar</h2>
+                <h2 class="text-2xl font-bold text-brand-text">Riwayat Belajar</h2>
                 <button onclick="showMenu()"
-                    class="text-sm bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-colors">
+                    class="text-sm bg-brand-surface hover:bg-brand-surface text-brand-text px-4 py-2 rounded-lg transition-colors">
                     Kembali ke Menu
                 </button>
             </div>
 
+            <!-- Badge Gallery (New) -->
+            <div class="mb-6">
+                <h3 class="text-sm font-semibold text-brand-text-muted uppercase tracking-wider mb-3">Pencapaian Kamu
+                </h3>
+                <div id="results-badges" class="grid grid-cols-3 gap-4">
+                    <!-- Badges injected here -->
+                </div>
+            </div>
+
+            <!-- Activity Chart Section (New) -->
+            <div class="mb-6">
+                <h3 class="text-sm font-semibold text-brand-text-muted uppercase tracking-wider mb-3">Aktivitas 7 Hari
+                    Terakhir</h3>
+                <div
+                    class="bg-brand-surface/50 border border-brand-border rounded-2xl p-4 h-64 flex items-center justify-center relative">
+                    <canvas id="activity-chart"></canvas>
+                    <div id="activity-empty-state"
+                        class="absolute inset-0 flex flex-col items-center justify-center text-center p-4 hidden">
+                        <span class="text-4xl mb-2">📊</span>
+                        <p class="text-brand-text font-bold">Belum ada data</p>
+                        <p class="text-sm text-brand-text-muted">Mulai latihan hari ini untuk melihat grafik progresmu!
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Latest/Current Result Highlight -->
             <div id="latest-result"
-                class="mb-8 p-6 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-slate-700 hidden">
+                class="mb-8 p-6 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-brand-border hidden">
                 <div class="text-center">
-                    <div class="text-sm text-slate-400 mb-1">Hasil Terakhir</div>
+                    <div class="text-sm text-brand-text-muted mb-1">Hasil Terakhir</div>
                     <div class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-accent to-brand-primary mb-2"
                         id="result-grade">A</div>
-                    <p class="text-white text-lg font-medium mb-4" id="result-message">Luar Biasa!</p>
+                    <p class="text-brand-text text-lg font-medium mb-4" id="result-message">Luar Biasa!</p>
 
                     <div class="flex justify-center gap-8 text-center">
                         <div>
@@ -325,7 +499,8 @@
 
             <!-- History List -->
             <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">5 Sesi Terakhir</h3>
+                <h3 class="text-sm font-semibold text-brand-text-muted uppercase tracking-wider mb-4">5 Sesi Terakhir
+                </h3>
                 <div class="space-y-3" id="history-list">
                     <!-- Javascript will populate this -->
                     <div class="text-center text-slate-500 py-8">Belum ada riwayat. Ayo mulai belajar!</div>
@@ -340,21 +515,21 @@
         <div id="modal-mode-select"
             class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
             <div
-                class="bg-brand-surface border border-slate-700 rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl relative">
+                class="bg-brand-dark/80 backdrop-blur-md border border-brand-border rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl relative">
                 <button onclick="closeModeSelect()"
-                    class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
+                    class="absolute top-4 right-4 text-brand-text-muted hover:text-brand-text transition-colors">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
                         </path>
                     </svg>
                 </button>
 
-                <h3 class="text-2xl font-bold text-white mb-2" id="mode-select-title">Pilih Mode</h3>
-                <p class="text-slate-400 mb-6">Pilih jenis latihan yang kamu inginkan.</p>
+                <h3 class="text-2xl font-bold text-brand-text mb-2" id="mode-select-title">Pilih Mode</h3>
+                <p class="text-brand-text-muted mb-6">Pilih jenis latihan yang kamu inginkan.</p>
 
                 <div class="grid grid-cols-1 gap-4">
                     <button onclick="startTraining()"
-                        class="flex items-center gap-4 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-2xl p-4 transition-all text-left">
+                        class="flex items-center gap-4 bg-brand-surface/50 hover:bg-brand-surface border border-brand-border rounded-2xl p-4 transition-all text-left">
                         <div class="p-3 bg-brand-primary/20 text-brand-primary rounded-xl">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -363,13 +538,29 @@
                             </svg>
                         </div>
                         <div>
-                            <div class="font-bold text-white text-lg">Latihan</div>
-                            <div class="text-sm text-slate-400">10 soal santai tanpa batas waktu per soal.</div>
+                            <div class="font-bold text-brand-text text-lg">Latihan</div>
+                            <div class="text-sm text-brand-text-muted">10 soal santai tanpa batas waktu per soal.</div>
+                        </div>
+                    </button>
+
+                    <!-- Focused Mode (New) -->
+                    <button onclick="startFocusedPractice()" id="btn-focused-mode"
+                        class="hidden flex items-center gap-4 bg-brand-surface/50 hover:bg-brand-surface border border-yellow-500/30 hover:border-yellow-500 rounded-2xl p-4 transition-all text-left group">
+                        <div
+                            class="p-3 bg-yellow-500/20 text-yellow-500 rounded-xl group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-bold text-brand-text text-lg">Latihan Fokus</div>
+                            <div class="text-sm text-brand-text-muted">Perbaiki kelemahanmu di soal-soal sulit!</div>
                         </div>
                     </button>
 
                     <button onclick="startExam()"
-                        class="flex items-center gap-4 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-2xl p-4 transition-all text-left">
+                        class="flex items-center gap-4 bg-brand-surface/50 hover:bg-brand-surface border border-brand-border rounded-2xl p-4 transition-all text-left">
                         <div class="p-3 bg-brand-accent/20 text-brand-accent rounded-xl">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -377,13 +568,13 @@
                             </svg>
                         </div>
                         <div>
-                            <div class="font-bold text-white text-lg">Ujian</div>
-                            <div class="text-sm text-slate-400">50 soal, 7 detik/soal. Stop kapan saja.</div>
+                            <div class="font-bold text-brand-text text-lg">Ujian</div>
+                            <div class="text-sm text-brand-text-muted">50 soal, 7 detik/soal. Stop kapan saja.</div>
                         </div>
                     </button>
 
                     <button onclick="showRaportFromModal()"
-                        class="flex items-center gap-4 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-2xl p-4 transition-all text-left mt-2">
+                        class="flex items-center gap-4 bg-brand-surface/50 hover:bg-brand-surface border border-brand-border rounded-2xl p-4 transition-all text-left mt-2">
                         <div class="p-3 bg-brand-secondary/20 text-brand-secondary rounded-xl">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -392,18 +583,17 @@
                             </svg>
                         </div>
                         <div>
-                            <div class="font-bold text-white text-lg">Lihat Raport</div>
-                            <div class="text-sm text-slate-400">Analisis hasil ujianmu.</div>
+                            <div class="font-bold text-brand-text text-lg">Lihat Raport</div>
+                            <div class="text-sm text-brand-text-muted">Analisis hasil ujianmu.</div>
                         </div>
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- 6. RAPORT SCREEN / MODAL -->
         <div id="screen-raport"
-            class="hidden fixed inset-0 z-[70] overflow-y-auto bg-brand-dark flex items-center justify-center p-4 animate-fade-in">
-            <div class="w-full max-w-3xl bg-white text-slate-900 rounded-none md:rounded-lg shadow-2xl relative overflow-hidden"
+            class="hidden fixed inset-0 z-[70] overflow-y-auto bg-brand-dark flex flex-col items-center justify-start md:justify-center p-4 animate-fade-in pt-20 pb-20 md:pt-4 md:pb-4">
+            <div class="w-full max-w-3xl bg-brand-surface text-brand-text rounded-2xl md:rounded-lg shadow-2xl overflow-y-auto overflow-x-hidden max-h-none md:max-h-[85vh] shrink-0"
                 id="raport-content">
                 <!-- Decorative Borders -->
                 <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-primary to-brand-accent"></div>
@@ -411,15 +601,16 @@
                 </div>
 
                 <div class="p-8 md:p-12">
-                    <div class="flex justify-between items-start mb-8 border-b-2 border-slate-100 pb-6">
+                    <div class="flex justify-between items-start mb-8 border-b-2 border-brand-border pb-6">
                         <div>
-                            <h1 class="text-3xl font-serif font-bold text-slate-800 tracking-tight mb-2">RAPOR HASIL
+                            <h1 class="text-3xl font-serif font-bold text-brand-text tracking-tight mb-2">RAPOR HASIL
                                 BELAJAR</h1>
-                            <p class="text-slate-500 text-sm uppercase tracking-widest font-semibold">Jago Angka</p>
+                            <p class="text-brand-text-muted text-sm uppercase tracking-widest font-semibold">Jago Angka
+                            </p>
                         </div>
                         <div class="text-right">
                             <div
-                                class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
+                                class="w-16 h-16 bg-brand-dark rounded-full flex items-center justify-center text-brand-text-muted">
                                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
@@ -431,43 +622,46 @@
 
                     <div class="grid grid-cols-2 gap-8 mb-8 text-sm">
                         <div>
-                            <p class="text-slate-500 mb-1">Nama Siswa</p>
-                            <p class="text-xl font-bold text-slate-900" id="raport-name">Budi Santoso</p>
+                            <p class="text-brand-text-muted mb-1">Nama Siswa</p>
+                            <p class="text-xl font-bold text-brand-text" id="raport-name">Budi Santoso</p>
                         </div>
                         <div>
-                            <p class="text-slate-500 mb-1">Kelas</p>
-                            <p class="text-xl font-bold text-slate-900" id="raport-class">7A</p>
+                            <p class="text-brand-text-muted mb-1">Kelas</p>
+                            <p class="text-xl font-bold text-brand-text" id="raport-class">7A</p>
                         </div>
                         <div>
-                            <p class="text-slate-500 mb-1">Mata Pelajaran</p>
-                            <p class="text-lg font-semibold text-slate-800" id="raport-subject">Perkalian Matematika</p>
-                            <p class="text-xs text-slate-500 mt-1 leading-relaxed" id="raport-description">Deskripsi
+                            <p class="text-brand-text-muted mb-1">Mata Pelajaran</p>
+                            <p class="text-lg font-semibold text-brand-text" id="raport-subject">Perkalian Matematika
+                            </p>
+                            <p class="text-xs text-brand-text-muted mt-1 leading-relaxed" id="raport-description">
+                                Deskripsi
                                 ujian...</p>
                         </div>
                         <div>
-                            <p class="text-slate-500 mb-1">Tanggal Cetak</p>
-                            <p class="text-lg font-semibold text-slate-800" id="raport-date">26 Jan 2026</p>
+                            <p class="text-brand-text-muted mb-1">Tanggal Cetak</p>
+                            <p class="text-lg font-semibold text-brand-text" id="raport-date">26 Jan 2026</p>
                         </div>
                     </div>
 
                     <!-- Table of Results -->
                     <div class="mb-8">
                         <h3
-                            class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
+                            class="text-sm font-bold text-brand-text-muted uppercase tracking-wider mb-4 border-b border-brand-border pb-2">
                             Hasil 3 Ujian Terakhir</h3>
                         <table class="w-full text-left border-collapse">
                             <thead>
-                                <tr class="text-xs text-slate-400 font-semibold uppercase tracking-wider bg-slate-50">
+                                <tr
+                                    class="text-xs text-brand-text-muted font-semibold uppercase tracking-wider bg-brand-dark">
                                     <th class="p-3">Tanggal</th>
                                     <th class="p-3">Waktu</th>
                                     <th class="p-3 text-right">Nilai Akhir</th>
                                 </tr>
                             </thead>
-                            <tbody id="raport-table-body" class="text-slate-700">
+                            <tbody id="raport-table-body" class="text-brand-text">
                                 <!-- Populated dynamically -->
                             </tbody>
-                            <tfoot class="bg-slate-50 font-bold border-t-2 border-slate-200">
-                                <tr class="text-slate-900">
+                            <tfoot class="bg-brand-dark font-bold border-t-2 border-brand-border">
+                                <tr class="text-brand-text">
                                     <td class="p-4" colspan="2">NILAI RATA-RATA</td>
                                     <td class="p-4 text-right text-xl text-brand-primary" id="raport-average">0</td>
                                 </tr>
@@ -475,28 +669,39 @@
                         </table>
                     </div>
 
+                    <!-- Badges Section -->
+                    <div class="mb-8 text-center">
+                        <h3
+                            class="text-sm font-bold text-brand-text-muted uppercase tracking-wider mb-4 border-b border-brand-border pb-2">
+                            Koleksi Lencana</h3>
+                        <div id="raport-badges" class="flex justify-center flex-wrap gap-4">
+                            <!-- Badges injected here -->
+                        </div>
+                    </div>
+
                     <!-- Summary & Motivation -->
-                    <div class="bg-slate-50 p-6 rounded-lg border border-slate-100 mb-8">
+                    <div class="bg-brand-dark p-6 rounded-lg border border-brand-border mb-8">
                         <div class="flex items-start gap-4">
                             <div class="flex-shrink-0">
                                 <span class="text-4xl" id="raport-emoji">🌟</span>
                             </div>
                             <div>
-                                <h4 class="font-bold text-slate-900 mb-1 text-lg" id="raport-grade-title">Sangat Baik
+                                <h4 class="font-bold text-brand-text mb-1 text-lg" id="raport-grade-title">Sangat Baik
                                 </h4>
-                                <p class="text-slate-600 italic" id="raport-motivation">"Teruslah belajar dan jangan
+                                <p class="text-brand-text-muted italic" id="raport-motivation">"Teruslah belajar dan
+                                    jangan
                                     pernah menyerah. Kamu memiliki potensi yang luar biasa!"</p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="text-center pt-8 border-t border-slate-100 flex justify-between items-end">
-                        <div class="text-xs text-slate-400 text-left">
+                    <div class="text-center pt-8 border-t border-brand-border flex justify-between items-end">
+                        <div class="text-xs text-brand-text-muted text-left">
                             Dibuat secara otomatis oleh<br>Jago Angka System
                         </div>
                         <div class="text-right">
-                            <div class="h-16 w-32 border-b border-slate-300 mb-2"></div>
-                            <p class="text-sm font-bold text-slate-800">Tanda Tangan Guru / Wali</p>
+                            <div class="h-16 w-32 border-b border-brand-border mb-2"></div>
+                            <p class="text-sm font-bold text-brand-text">Tanda Tangan Guru / Wali</p>
                         </div>
                     </div>
 
@@ -504,7 +709,7 @@
             </div>
 
             <button onclick="closeRaport()"
-                class="fixed top-6 right-6 bg-slate-800 text-white rounded-full p-3 hover:bg-slate-700 transition-all z-[80]">
+                class="fixed top-6 right-6 bg-brand-surface text-brand-text rounded-full p-3 hover:bg-brand-surface transition-all z-[80]">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
                     </path>
@@ -514,10 +719,10 @@
 
         <!-- 7. LEADERBOARD SCREEN -->
         <section id="screen-leaderboard"
-            class="hidden w-full max-w-4xl h-[90vh] flex flex-col bg-brand-surface/90 backdrop-blur-xl border border-slate-700/50 rounded-3xl shadow-2xl overflow-hidden">
+            class="hidden w-full max-w-4xl h-[90vh] flex flex-col glass-effect border border-brand-border/50 rounded-3xl shadow-2xl overflow-hidden">
 
             <!-- Header -->
-            <div class="p-6 border-b border-slate-700/50 flex justify-between items-center bg-slate-900/50">
+            <div class="p-6 border-b border-brand-border/50 flex justify-between items-center bg-slate-900/50">
                 <div class="flex items-center gap-4">
                     <div class="p-3 bg-yellow-500/20 text-yellow-500 rounded-xl shadow-lg shadow-yellow-500/10">
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -527,12 +732,12 @@
                         </svg>
                     </div>
                     <div>
-                        <h2 class="text-2xl font-bold text-white">Peringkat Juara</h2>
-                        <p class="text-slate-400 text-sm">Siapa Jagoan Matematika?</p>
+                        <h2 class="text-2xl font-bold text-brand-text">Peringkat Juara</h2>
+                        <p class="text-brand-text-muted text-sm">Siapa Jagoan Matematika?</p>
                     </div>
                 </div>
                 <button onclick="showMenu()"
-                    class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+                    class="bg-brand-surface hover:bg-brand-surface text-slate-300 hover:text-brand-text px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -542,15 +747,15 @@
             </div>
 
             <!-- Filters -->
-            <div class="p-4 md:p-6 bg-slate-800/30 border-b border-slate-700/50">
+            <div class="p-4 md:p-6 bg-brand-surface/30 border-b border-brand-border/50">
                 <!-- Time Filter (New) -->
-                <div class="flex bg-slate-900/50 p-1 rounded-xl border border-slate-700/50 mb-4">
+                <div class="flex bg-slate-900/50 p-1 rounded-xl border border-brand-border/50 mb-4">
                     <button onclick="filterLeaderboardTime('weekly')" id="btn-filter-time-weekly"
-                        class="flex-1 py-2 text-sm font-medium rounded-lg text-white bg-slate-700 shadow-lg shadow-black/20 transition-all">
+                        class="flex-1 py-2 text-sm font-medium rounded-lg text-brand-text bg-slate-700 shadow-lg shadow-black/20 transition-all">
                         Minggu Ini
                     </button>
                     <button onclick="filterLeaderboardTime('all')" id="btn-filter-time-all"
-                        class="flex-1 py-2 text-sm font-medium rounded-lg text-slate-400 hover:text-white transition-all">
+                        class="flex-1 py-2 text-sm font-medium rounded-lg text-brand-text-muted hover:text-brand-text transition-all">
                         Semua Waktu
                     </button>
                 </div>
@@ -559,35 +764,35 @@
                     <!-- Class Filter -->
                     <div>
                         <label
-                            class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Kategori
+                            class="block text-xs font-semibold text-brand-text-muted uppercase tracking-wider mb-2 ml-1">Kategori
                             Kelas</label>
-                        <div class="flex bg-slate-900/50 p-1 rounded-xl border border-slate-700/50">
+                        <div class="flex bg-slate-900/50 p-1 rounded-xl border border-brand-border/50">
                             <button onclick="filterLeaderboardClass('7')" id="btn-filter-class-7"
-                                class="flex-1 py-2 text-sm font-medium rounded-lg text-slate-400 hover:text-white transition-all">7</button>
+                                class="flex-1 py-2 text-sm font-medium rounded-lg text-brand-text-muted hover:text-brand-text transition-all">7</button>
                             <button onclick="filterLeaderboardClass('8')" id="btn-filter-class-8"
-                                class="flex-1 py-2 text-sm font-medium rounded-lg text-slate-400 hover:text-white transition-all">8</button>
+                                class="flex-1 py-2 text-sm font-medium rounded-lg text-brand-text-muted hover:text-brand-text transition-all">8</button>
                             <button onclick="filterLeaderboardClass('9')" id="btn-filter-class-9"
-                                class="flex-1 py-2 text-sm font-medium rounded-lg text-slate-400 hover:text-white transition-all">9</button>
+                                class="flex-1 py-2 text-sm font-medium rounded-lg text-brand-text-muted hover:text-brand-text transition-all">9</button>
                             <button onclick="filterLeaderboardClass('SMA')" id="btn-filter-class-SMA"
-                                class="flex-1 py-2 text-sm font-medium rounded-lg text-slate-400 hover:text-white transition-all">SMA</button>
+                                class="flex-1 py-2 text-sm font-medium rounded-lg text-brand-text-muted hover:text-brand-text transition-all">SMA</button>
                         </div>
                     </div>
 
                     <!-- Operation Filter -->
                     <div>
                         <label
-                            class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Kategori
+                            class="block text-xs font-semibold text-brand-text-muted uppercase tracking-wider mb-2 ml-1">Kategori
                             Soal</label>
                         <div class="relative">
                             <select id="select-leaderboard-op" onchange="filterLeaderboardOp(this.value)"
-                                class="w-full bg-slate-900/50 border border-slate-700 text-white text-sm rounded-xl focus:ring-brand-primary focus:border-brand-primary block p-2.5 appearance-none">
+                                class="w-full bg-slate-900/50 border border-brand-border text-brand-text text-sm rounded-xl focus:ring-brand-primary focus:border-brand-primary block p-2.5 appearance-none">
                                 <option value="multiply">Perkalian</option>
                                 <option value="divide">Pembagian</option>
                                 <option value="add">Penjumlahan</option>
                                 <option value="subtract">Pengurangan</option>
                             </select>
                             <div
-                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
+                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-brand-text">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M19 9l-7 7-7-7"></path>
@@ -602,23 +807,24 @@
             <div class="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6" id="leaderboard-list">
                 <!-- Debug Button (Temporary) -->
                 <div class="mb-4 text-center">
-                    <button onclick="fetchLeaderboardDebug()" class="text-xs text-slate-500 hover:text-white underline">
+                    <button onclick="fetchLeaderboardDebug()"
+                        class="text-xs text-slate-500 hover:text-brand-text underline">
                         [DEBUG] Lihat Semua Data (Tanpa Filter)
                     </button>
                 </div>
                 <!-- Items will be injected here -->
                 <div class="animate-pulse space-y-4">
-                    <div class="h-16 bg-slate-800/50 rounded-xl"></div>
-                    <div class="h-16 bg-slate-800/50 rounded-xl"></div>
-                    <div class="h-16 bg-slate-800/50 rounded-xl"></div>
+                    <div class="h-16 bg-brand-surface/50 rounded-xl"></div>
+                    <div class="h-16 bg-brand-surface/50 rounded-xl"></div>
+                    <div class="h-16 bg-brand-surface/50 rounded-xl"></div>
                 </div>
             </div>
 
             <!-- User Rank Footer (Optional, sticky at bottom) -->
-            <div class="p-4 bg-slate-900 border-t border-slate-700 hidden" id="current-user-rank-container">
-                <div class="flex items-center justify-between text-white">
+            <div class="p-4 bg-slate-900 border-t border-brand-border hidden" id="current-user-rank-container">
+                <div class="flex items-center justify-between text-brand-text">
                     <div class="flex items-center gap-3">
-                        <span class="font-bold text-slate-400">#<span id="user-rank-pos">-</span></span>
+                        <span class="font-bold text-brand-text-muted">#<span id="user-rank-pos">-</span></span>
                         <span class="font-bold">Kamu</span>
                     </div>
                     <div class="text-right">
@@ -632,20 +838,21 @@
 
     <!-- Overlay & Modals if needed -->
     <div id="toast"
-        class="fixed top-6 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-xl border border-slate-700 translate-y-[-150%] transition-transform duration-300 z-[100]">
+        class="fixed top-6 left-1/2 transform -translate-x-1/2 bg-brand-surface text-brand-text px-6 py-3 rounded-full shadow-xl border border-brand-border translate-y-[-150%] transition-transform duration-300 z-[100]">
         Pesan notifikasi
     </div>
 
-    <!-- Firebase SDKs -->
-    <script type="importmap">
-      {
-        "imports": {
-          "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
-          "firebase/analytics": "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js",
-          "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"
-        }
-      }
-    </script>
+    <!-- Badge Unlock Toast (New) -->
+    <div id="badge-toast">
+        <div class="text-5xl animate-bounce-custom">🏆</div>
+        <div>
+            <h3 class="text-xl font-bold text-yellow-500 mb-1">Badge Unlocked!</h3>
+            <p id="badge-toast-title" class="text-lg font-bold text-white mb-1">Si Kilat</p>
+            <p id="badge-toast-desc" class="text-sm text-brand-text-muted">Keterangan...</p>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs (Import map moved to head section) -->
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "firebase/app";
@@ -659,14 +866,12 @@
             orderBy,
             limit,
             getDocs,
-            onSnapshot,
-            Timestamp
+            startAfter,
+            Timestamp,
+            enableIndexedDbPersistence
         } from "firebase/firestore";
-        // TODO: Add SDKs for Firebase products that you want to use
-        // https://firebase.google.com/docs/web/setup#available-libraries
 
         // Your web app's Firebase configuration
-        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
         const firebaseConfig = {
             apiKey: "AIzaSyDbAysmQRkIATXMIVsIaf8ei-qJ4qc9C0k",
             authDomain: "jagoangka-7f05a.firebaseapp.com",
@@ -682,6 +887,16 @@
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
 
+        // Enable offline persistence (IndexedDB cache)
+        // Data yang sudah pernah diambil akan disimpan lokal, mengurangi Reads ke 0 untuk revisit
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Persistence gagal: Ada tab lain yang terbuka');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Persistence tidak didukung browser ini');
+            }
+        });
+
         // Expose DB to window so script.js can use it
         window.firebaseDb = db;
         window.firebaseCollection = collection;
@@ -691,11 +906,12 @@
         window.firebaseOrderBy = orderBy;
         window.firebaseLimit = limit;
         window.firebaseGetDocs = getDocs;
-        window.firebaseOnSnapshot = onSnapshot;
+        window.firebaseStartAfter = startAfter;
         window.firebaseTimestamp = Timestamp;
 
-        console.log("Firebase initialized with Firestore");
+        console.log("Firebase initialized with Firestore + Offline Persistence");
     </script>
+    <script type="module" src="background3d.js"></script>
     <script src="script.js" defer></script>
 </body>
 

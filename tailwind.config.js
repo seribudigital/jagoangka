@@ -14,6 +14,9 @@ module.exports = {
           secondary: '#ec4899',
           accent: '#22d3ee',
           surface: '#1e293b',
+          text: 'var(--text-primary)',
+          'text-muted': 'var(--text-secondary)',
+          border: 'var(--border-color)',
         }
       },
       animation: {

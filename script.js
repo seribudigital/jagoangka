@@ -25,11 +25,39 @@ const state = {
     leaderboard: {
         filterClass: '7',
         filterOp: 'multiply',
-        filterOp: 'multiply',
         filterTime: 'weekly', // 'weekly' or 'all'
         data: [],
-        unsubscribe: null // Store listener
-    }
+        lastDoc: null, // For pagination (startAfter)
+        hasMore: false  // Whether more pages exist
+    },
+    // New: Audio State
+    muted: false,
+    // New: Badge System (Per-Mode tracking)
+    achievements: {
+        multiply: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
+        divide: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
+        add: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
+        subtract: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] }
+    },
+    // New: Activity Logs
+    activityLogs: {}, // { "YYYY-MM-DD": count }
+
+    // New: Adaptive Learning
+    weaknesses: {} // { "multiply": { "3x4": { count: 3, q: "3 x 4", a: 12 }, ... } }
+};
+
+/**
+ * CONFIG
+ */
+const BADGES = [
+    { id: 'speedster', icon: '⚡', title: 'Si Kilat', desc: 'Jawab 5 soal benar berturut-turut dengan cepat', condition: (ach) => ach.streak >= 5 },
+    { id: 'math_warrior', icon: '🛡️', title: 'Pejuang Matematika', desc: 'Kumpulkan 50 jawaban benar total', condition: (ach) => ach.totalCorrect >= 50 },
+    { id: 'perfectionist', icon: '👑', title: 'Nilai Sempurna', desc: 'Dapatkan nilai 100 di Mode Ujian', condition: (ach) => ach.perfectExams > 0 }
+];
+
+const SOUNDS = {
+    correct: new Audio('https://cdn.pixabay.com/audio/2021/08/04/audio_bb630cc098.mp3'), // Ding
+    incorrect: new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3') // Thud/Error
 };
 
 /**
@@ -37,6 +65,7 @@ const state = {
  */
 const screens = {
     welcome: document.getElementById('screen-welcome'),
+    landing: document.getElementById('screen-landing'),
     menu: document.getElementById('screen-menu'),
     game: document.getElementById('screen-game'),
     results: document.getElementById('screen-results'),
@@ -91,9 +120,16 @@ const els = {
     btnFilterClass9: document.getElementById('btn-filter-class-9'),
     btnFilterClassSMA: document.getElementById('btn-filter-class-SMA'),
 
-    // Backgrounds
-    bgVideo: document.getElementById('bg-video'),
-    bgDefault: document.getElementById('bg-default')
+    // Theme
+    btnTheme: document.getElementById('btn-theme-toggle'),
+
+    // Audio
+    btnSound: document.getElementById('btn-sound-toggle'),
+    iconSoundOn: document.getElementById('icon-sound-on'),
+    iconSoundOff: document.getElementById('icon-sound-off'),
+
+    // Badges (New Elements)
+    // We will inject these dynamically
 };
 
 /**
@@ -101,12 +137,14 @@ const els = {
  */
 function init() {
     loadData();
+    initTheme();
+    initAudio();
 
     // Check if user exists
     if (state.user.name) {
         showMenu();
     } else {
-        showWelcome();
+        showLanding();
     }
 
     // Event Listeners
@@ -133,6 +171,41 @@ function init() {
     // Button Listeners
     els.btnStopExam.addEventListener('click', stopExam);
     els.btnBackGame.addEventListener('click', showMenu);
+    if (els.btnTheme) els.btnTheme.addEventListener('click', toggleTheme);
+    if (els.btnSound) els.btnSound.addEventListener('click', toggleMute);
+}
+
+/**
+ * AUDIO SYSTEM
+ */
+function initAudio() {
+    updateMuteUI();
+}
+
+function toggleMute() {
+    state.muted = !state.muted;
+    saveData();
+    updateMuteUI();
+}
+
+function updateMuteUI() {
+    if (state.muted) {
+        els.iconSoundOn.classList.add('hidden');
+        els.iconSoundOff.classList.remove('hidden');
+        els.btnSound.classList.add('bg-red-500/20', 'text-red-400');
+    } else {
+        els.iconSoundOn.classList.remove('hidden');
+        els.iconSoundOff.classList.add('hidden');
+        els.btnSound.classList.remove('bg-red-500/20', 'text-red-400');
+    }
+}
+
+function playFeedback(isCorrect) {
+    if (state.muted) return;
+
+    const sound = isCorrect ? SOUNDS.correct : SOUNDS.incorrect;
+    sound.currentTime = 0; // Reset
+    sound.play().catch(e => console.log("Audio play failed interaction required", e));
 }
 
 function loadData() {
@@ -146,9 +219,92 @@ function loadData() {
     if (savedHistory) {
         state.game.history = JSON.parse(savedHistory);
     }
+
+    const savedAchievements = localStorage.getItem('math_mastery_achievements');
+    if (savedAchievements) {
+        const parsed = JSON.parse(savedAchievements);
+        if (parsed.multiply) {
+            // New schema format
+            state.achievements = { ...state.achievements, ...parsed };
+        } else {
+            // Backwards compatibility: Migrate old global schema to multiply
+            state.achievements.multiply = { ...state.achievements.multiply, ...parsed };
+        }
+    }
+
+    const savedMute = localStorage.getItem('math_mastery_muted');
+    if (savedMute !== null) {
+        state.muted = savedMute === 'true';
+    }
+
+    const savedActivity = localStorage.getItem('math_mastery_activity');
+    if (savedActivity) {
+        state.activityLogs = JSON.parse(savedActivity);
+        cleanupActivityLogs();
+    }
+
+    const savedWeaknesses = localStorage.getItem('math_mastery_weaknesses');
+    if (savedWeaknesses) {
+        state.weaknesses = JSON.parse(savedWeaknesses);
+    }
+
+    // Retroactive badge check for 'perfectionist' per-mode
+    ['multiply', 'divide', 'add', 'subtract'].forEach(mode => {
+        if (!state.achievements[mode]) {
+            state.achievements[mode] = { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] };
+        }
+
+        if (state.achievements[mode].perfectExams === 0 && state.game.history.length > 0) {
+            const hasPerfectExam = state.game.history.some(h => {
+                if (h.type !== 'exam' || h.mode !== mode) return false;
+                const max = h.maxScore || (h.score === 100 ? 100 : 500);
+                return h.score === max && h.score > 0; // ensure no 0-score logic accidentally counts
+            });
+            if (hasPerfectExam) {
+                state.achievements[mode].perfectExams = 1;
+                saveData();
+            }
+        }
+    });
+
+    checkAllAchievementsSilent(); // Update achievements per mode silently without popping up toasts on reload
+
+    // Initial check for recommendation
+    // Can't update UI here directly as DOM might not be fully ready or hidden, 
+    // but showMenu() will be called anyway if user is logged in.
+}
+
+function saveData() {
+    localStorage.setItem('math_mastery_achievements', JSON.stringify(state.achievements));
+    localStorage.setItem('math_mastery_muted', state.muted);
+    localStorage.setItem('math_mastery_activity', JSON.stringify(state.activityLogs));
+    localStorage.setItem('math_mastery_weaknesses', JSON.stringify(state.weaknesses));
 }
 
 function saveUser(name, className) {
+    const isNewUser = (!state.user || !state.user.name) || (state.user.name.trim().toLowerCase() !== name.trim().toLowerCase());
+
+    if (isNewUser) {
+        // Clear old data when a different user registers
+        state.game.history = [];
+        state.achievements = {
+            totalCorrect: 0,
+            streak: 0,
+            perfectExams: 0,
+            badges: []
+        };
+        state.activityLogs = {};
+        state.weaknesses = {};
+
+        localStorage.removeItem('math_mastery_history');
+        localStorage.removeItem('math_mastery_achievements');
+        localStorage.removeItem('math_mastery_activity');
+        localStorage.removeItem('math_mastery_weaknesses');
+
+        // Ensure state user is initialized to avoid null errors below
+        if (!state.user) state.user = {};
+    }
+
     state.user.name = name;
     state.user.class = className;
     localStorage.setItem('math_mastery_user', JSON.stringify(state.user));
@@ -169,11 +325,43 @@ function showWelcome() {
     updateBackground(true);
 }
 
+const btnLandingAction = document.getElementById('btn-landing-action');
+
+function showLanding() {
+    hideAllScreens();
+    screens.landing.classList.remove('hidden');
+    els.header.classList.add('hidden');
+    updateBackground(true);
+
+    // Update Button Text/State
+    if (state.user.name) {
+        btnLandingAction.textContent = "Kembali ke Menu";
+    } else {
+        btnLandingAction.textContent = "Mulai Belajar";
+    }
+}
+
+function handleLandingAction() {
+    if (state.user.name) {
+        showMenu();
+    } else {
+        showWelcome();
+    }
+}
+
+window.showWelcome = showWelcome;
+window.showLanding = showLanding;
+window.showWelcome = showWelcome;
+window.showLanding = showLanding;
+window.handleLandingAction = handleLandingAction;
+window.startFocusedPractice = startFocusedPractice;
+
 function showMenu() {
     hideAllScreens();
     screens.menu.classList.remove('hidden');
     els.header.classList.remove('hidden');
     updateBackground(false);
+    updateDashboardRecommendation();
 }
 
 function showGame() {
@@ -190,40 +378,105 @@ function showResults(isNewResult = true) {
 
     if (isNewResult) {
         els.latestResult.classList.remove('hidden');
+        // Render badges specifically for results screen
+        renderBadges('results-badges');
     } else {
         els.latestResult.classList.add('hidden');
+        // If viewing history, also show badges? 
+        // Logic says "Gallery Badge" at bottom of results or profile.
+        // Let's show it always in results screen for motivation.
+        renderBadges('results-badges');
     }
+
+    // Render Activity Chart
+    setTimeout(() => {
+        renderActivityChart();
+    }, 100);
+
     updateBackground(false);
 }
 
 function updateBackground(isWelcome) {
-    // Show video on Welcome, Menu, and Leaderboard screens
-    // Hide video ONLY during Game and Result screens to focus attention
-    const shouldShowVideo = isWelcome ||
-        !screens.menu.classList.contains('hidden') ||
-        !screens.leaderboard.classList.contains('hidden');
+    // 3D Background takes care of itself. We can dim canvas opacity during game.
+    const canvas = document.getElementById('bg-canvas');
+    if (canvas) {
+        const shouldShowFull = isWelcome ||
+            !screens.landing.classList.contains('hidden') ||
+            !screens.menu.classList.contains('hidden') ||
+            !screens.leaderboard.classList.contains('hidden');
 
-    if (shouldShowVideo) {
-        els.bgVideo.classList.remove('opacity-0');
-        els.bgVideo.classList.add('opacity-100');
-        els.bgDefault.classList.remove('opacity-100');
-        els.bgDefault.classList.add('opacity-0');
-    } else {
-        els.bgVideo.classList.remove('opacity-100');
-        els.bgVideo.classList.add('opacity-0');
-        els.bgDefault.classList.remove('opacity-0');
-        els.bgDefault.classList.add('opacity-100');
+        if (shouldShowFull) {
+            canvas.style.opacity = '1';
+            canvas.style.transition = 'opacity 1s ease';
+        } else {
+            // Dim the canvas slightly during gameplay/results to focus on questions
+            canvas.style.opacity = '0.3';
+            canvas.style.transition = 'opacity 1s ease';
+        }
     }
 }
 
 function showModeSelectModal(operation) {
     state.selectedModeOp = operation;
+
+    // Check if Focused Mode should be available
+    const btnFocused = document.getElementById('btn-focused-mode');
+    const weakCount = countWeaknesses(operation);
+
+    if (weakCount > 0) {
+        btnFocused.classList.remove('hidden');
+        btnFocused.classList.add('flex'); // Ensure flex display
+    } else {
+        btnFocused.classList.add('hidden');
+        btnFocused.classList.remove('flex');
+    }
+
     screens.modalMode.classList.remove('hidden');
+}
+
+function countWeaknesses(mode) {
+    if (!state.weaknesses[mode]) return 0;
+    // Count items with > 2 errors
+    return Object.values(state.weaknesses[mode]).filter(item => item.count > 2).length;
 }
 
 function closeModeSelect() {
     screens.modalMode.classList.add('hidden');
     state.selectedModeOp = null;
+}
+
+function updateDashboardRecommendation() {
+    const hintContainer = document.getElementById('recommendation-hint');
+    const hintText = document.getElementById('recommendation-text');
+
+    if (!hintContainer || !hintText) return;
+
+    // Find mode with most weaknesses
+    let maxWeakness = 0;
+    let worstMode = null;
+
+    ['multiply', 'divide', 'add', 'subtract'].forEach(mode => {
+        const count = countWeaknesses(mode);
+        if (count > maxWeakness) {
+            maxWeakness = count;
+            worstMode = mode;
+        }
+    });
+
+    if (maxWeakness > 0 && worstMode) {
+        let modeName = '';
+        switch (worstMode) {
+            case 'multiply': modeName = 'Perkalian'; break;
+            case 'divide': modeName = 'Pembagian'; break;
+            case 'add': modeName = 'Penjumlahan'; break;
+            case 'subtract': modeName = 'Pengurangan'; break;
+        }
+
+        hintText.innerHTML = `Kamu punya <b>${maxWeakness} soal sulit</b> di <span class='text-brand-text font-bold'>${modeName}</span>. Yuk, perbaiki nilai kamu!`;
+        hintContainer.classList.remove('hidden');
+    } else {
+        hintContainer.classList.add('hidden');
+    }
 }
 
 function showRaportScreen() {
@@ -247,7 +500,7 @@ function showLeaderboardScreen() {
         else if (userClass.includes('9')) state.leaderboard.filterClass = '9';
         else if (['10', '11', '12', 'X', 'XI', 'XII', 'SMA', 'SMK', 'MA'].some(x => userClass.includes(x))) state.leaderboard.filterClass = 'SMA';
     }
-    updateLeaderboardUI();
+    updateFilterUI();
     fetchLeaderboard();
 }
 
@@ -348,6 +601,92 @@ function generateQuestions(mode, count) {
     for (let i = 0; i < count; i++) {
         questions.push(generateSingleQuestion(mode));
     }
+    return questions;
+}
+
+// Focused Mode Logic
+function startFocusedPractice() {
+    if (!state.selectedModeOp) return;
+    initFocusedGame(state.selectedModeOp);
+    closeModeSelect();
+}
+
+// Re-uses initGame but with specific question generation
+function initFocusedGame(mode) {
+    state.game.mode = mode;
+    state.game.type = 'practice'; // Treat as practice
+    state.game.score = 0;
+    state.game.currentQuestionIndex = 0;
+    state.game.isProcessing = false;
+    state.game.startTime = new Date();
+
+    // Generate Focused Questions
+    state.game.questions = generateFocusedQuestions(mode, GAME_CONFIG.practice.count);
+    state.game.currentAnswer = '';
+
+    // Update UI
+    let modeText = '';
+    switch (mode) {
+        case 'multiply': modeText = 'PERKALIAN'; break;
+        case 'divide': modeText = 'PEMBAGIAN'; break;
+        case 'add': modeText = 'PENJUMLAHAN'; break;
+        case 'subtract': modeText = 'PENGURANGAN'; break;
+    }
+    els.gameModeLabel.textContent = `${modeText} - FOKUS`; // Special label
+    updateScoreUI();
+
+    // UI Toggles (Same as Practice)
+    els.btnStopExam.classList.add('hidden');
+    els.btnBackGame.classList.remove('hidden');
+    els.examTimerContainer.classList.add('hidden');
+
+    showGame();
+    renderQuestion();
+    startTimer();
+}
+
+function generateFocusedQuestions(mode, count) {
+    const questions = [];
+    const weakItems = [];
+
+    // 1. Collect Weaknesses (> 2 errors)
+    if (state.weaknesses[mode]) {
+        Object.values(state.weaknesses[mode]).forEach(item => {
+            if (item.count > 2) {
+                weakItems.push(item);
+            }
+        });
+    }
+
+    // 2. Determine Strategy
+    // Threshold: If < 3 weaknesses, mix with random.
+    let needed = count;
+
+    if (weakItems.length === 0) {
+        // Fallback if user clicked Focused but has no weaknesses
+        // Just generate random
+        return generateQuestions(mode, count);
+    }
+
+    // Fill with weaknesses first
+    while (questions.length < count) {
+        if (weakItems.length >= 3) {
+            // Enough weaknesses, mostly use them
+            // Pick random weakness
+            const randWeak = weakItems[Math.floor(Math.random() * weakItems.length)];
+            questions.push({ q: randWeak.q, a: randWeak.a });
+        } else {
+            // Mixed Mode (Broadening the horizong to avoid boredom)
+            // 50% chance weakness, 50% chance random
+            if (Math.random() > 0.5 || weakItems.length === 0) {
+                questions.push(generateSingleQuestion(mode));
+            } else {
+                const randWeak = weakItems[Math.floor(Math.random() * weakItems.length)];
+                questions.push({ q: randWeak.q, a: randWeak.a });
+            }
+        }
+    }
+
     return questions;
 }
 
@@ -469,18 +808,50 @@ function submitAnswer() {
 
 function handleCorrect() {
     // Visual Feedback
-    els.inputDisplay.classList.add('border-green-500', 'bg-green-500/20');
+    els.inputDisplay.classList.add('border-green-500', 'bg-green-500/20', 'animate-bounce-custom');
     state.game.score += 10;
+
+    // Badge Logic Updates (Per-Mode tracking)
+    state.achievements[state.game.mode].totalCorrect++;
+    state.achievements[state.game.mode].streak++;
+
+    // Activity Log Update
+    const today = new Date().toISOString().split('T')[0];
+    state.activityLogs[today] = (state.activityLogs[today] || 0) + 1;
+
+    // Adaptive Learning: Reduce weakness count
+    // Identify current question key
+    const currentQ = state.game.questions[state.game.currentQuestionIndex];
+    // We need to reconstruct key or store it. Let's use question string as unique enough for now?
+    // actually, let's use a standard key format if possible, but question text is unique per operation usually.
+    // Better to have a helper to generate key?
+    // For now, let's use the question string 'q' as key.
+    trackWeakness(currentQ.q, currentQ.a, state.game.mode, true); // true = correct answer
+
+    saveData();
+
+    playFeedback(true);
+    checkAchievements();
     updateScoreUI();
 
     setTimeout(() => {
-        els.inputDisplay.classList.remove('border-green-500', 'bg-green-500/20');
+        els.inputDisplay.classList.remove('border-green-500', 'bg-green-500/20', 'animate-bounce-custom');
         nextQuestion();
     }, 500);
 }
 
 function handleIncorrect() {
     els.inputDisplay.classList.add('border-red-500', 'animate-shake', 'bg-red-500/20');
+
+    // Adaptive Learning: Track Weakness
+    const currentQ = state.game.questions[state.game.currentQuestionIndex];
+    trackWeakness(currentQ.q, currentQ.a, state.game.mode, false); // false = incorrect answer
+
+    // Badge Logic Updates (Per-Mode tracking)
+    state.achievements[state.game.mode].streak = 0; // Reset streak
+
+    playFeedback(false);
+    updateScoreUI(); // Just in case we want to show streak loss later
 
     setTimeout(() => {
         els.inputDisplay.classList.remove('border-red-500', 'animate-shake', 'bg-red-500/20');
@@ -562,8 +933,88 @@ function endGame() {
         user: state.user
     });
 
+    // Check specific Exam badges
+    if (state.game.type === 'exam') {
+        const correctAnswers = state.game.score / 10;
+        const totalAnswers = state.game.currentQuestionIndex; // Using currentQuestionIndex to represent answers given
+        if (state.game.score === result.maxScore && correctAnswers === totalAnswers && totalAnswers > 0) {
+            state.achievements[state.game.mode].perfectExams++;
+            checkAchievements(); // Will unlock 'perfectionist'
+        }
+    }
+
+    saveData(); // Save achievements persistence
     displayResultSummary(result);
     showResults(true);
+}
+
+/**
+ * ADAPTIVE LEARNING SYSTEM
+ */
+function trackWeakness(questionText, answer, mode, isCorrect) {
+    // Ensure mode object exists
+    if (!state.weaknesses[mode]) {
+        state.weaknesses[mode] = {};
+    }
+
+    const key = questionText.replace(/\s/g, ''); // Remove spaces for key e.g. "3x4"
+
+    if (isCorrect) {
+        // Recovering / Mastery
+        if (state.weaknesses[mode][key]) {
+            state.weaknesses[mode][key].count--;
+
+            // Visual Reward if mastery happens (count drops to 0 or below)
+            // But let's just show "Good Job" if it WAS a weakness.
+            if (state.weaknesses[mode][key].count <= 0) {
+                delete state.weaknesses[mode][key];
+                showToast("Mantap! Kelemahanmu berkurang! 💪", "success");
+            } else {
+                // Still weak but improving
+            }
+        }
+    } else {
+        // Incorrect
+        if (!state.weaknesses[mode][key]) {
+            state.weaknesses[mode][key] = {
+                q: questionText,
+                a: answer,
+                count: 0
+            };
+        }
+        state.weaknesses[mode][key].count++;
+
+        // Only persist if count > 2? Or just persist all failures and filter later?
+        // Requirement: "dijawab salah lebih dari 2 kali".
+        // Let's count every error, but only consider it a "Weakness" for Focused Mode if count > 2.
+    }
+
+    // Auto-save happens in handleCorrect/handleIncorrect via saveData()
+}
+
+// Show Toast Helper (if not exists, create simple one)
+function showToast(msg, type = 'info') {
+    const toast = document.getElementById('toast');
+    if (!toast) return; // Should be in HTML
+
+    toast.textContent = msg;
+    toast.classList.remove('translate-y-[-150%]', 'bg-brand-surface', 'border-brand-border', 'text-brand-text');
+
+    if (type === 'success') {
+        toast.style.backgroundColor = '#10b981'; // Green
+        toast.style.color = 'white';
+    } else if (type === 'error') {
+        toast.style.backgroundColor = '#ef4444'; // Red
+        toast.style.color = 'white';
+    } else {
+        toast.style.backgroundColor = '#1f2937'; // Dark
+        toast.style.color = 'white';
+    }
+
+    toast.classList.remove('translate-y-[-150%]');
+    setTimeout(() => {
+        toast.classList.add('translate-y-[-150%]');
+    }, 3000);
 }
 
 /**
@@ -626,15 +1077,23 @@ function deriveClassCategory(inputClass) {
     // Let's use '7' as safe default for now as it's the lowest.
 }
 
-async function fetchLeaderboard() {
-    const listEl = els.leaderboardList; // Fix: Restore missing variable
+const LEADERBOARD_PAGE_SIZE = 20;
 
-    listEl.innerHTML = `
-        <div class="animate-pulse space-y-4">
-            <div class="h-16 bg-slate-800/50 rounded-xl"></div>
-            <div class="h-16 bg-slate-800/50 rounded-xl"></div>
-        </div>
-    `;
+async function fetchLeaderboard(isLoadMore = false) {
+    const listEl = els.leaderboardList;
+
+    if (!isLoadMore) {
+        // Reset pagination state on fresh fetch
+        state.leaderboard.lastDoc = null;
+        state.leaderboard.hasMore = false;
+
+        listEl.innerHTML = `
+            <div class="animate-pulse space-y-4">
+                <div class="h-16 bg-slate-800/50 rounded-xl"></div>
+                <div class="h-16 bg-slate-800/50 rounded-xl"></div>
+            </div>
+        `;
+    }
 
     if (!window.firebaseDb) {
         listEl.innerHTML = `
@@ -653,224 +1112,148 @@ async function fetchLeaderboard() {
         // Construct Query
         const constraints = [
             window.firebaseWhere("tipeOperasi", "==", state.leaderboard.filterOp),
-            window.firebaseWhere("kelasKategori", "==", state.leaderboard.filterClass)
+            window.firebaseWhere("kelasKategori", "==", state.leaderboard.filterClass),
+            window.firebaseOrderBy("skor", "desc"),
+            window.firebaseOrderBy("waktuRataRata", "asc")
         ];
 
-        // Weekly Filter Logic
-        if (state.leaderboard.filterTime === 'weekly') {
-            // Calculate start of current week (Monday 00:00)
-            const now = new Date();
-            const day = now.getDay(); // 0 (Sun) - 6 (Sat)
-            const diff = now.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
-
-            const startOfWeek = new Date(now.setDate(diff));
-            startOfWeek.setHours(0, 0, 0, 0);
-
-            // Firestore requires Timestamp
-            const startOfWeekTimestamp = window.firebaseTimestamp.fromDate(startOfWeek);
-
-            console.log("Filtering weekly from:", startOfWeek);
-            constraints.push(window.firebaseWhere("tanggal", ">=", startOfWeekTimestamp));
-
-            // Default Sort for Weekly: Score Desc, then Date?
-            // Note: If we use range filter on 'tanggal', the first orderBy MUST be 'tanggal'.
-            // This is a Firestore limitation.
-            // WORKAROUND: We cannot sort by Skor DESC directly if we filter by Date Range first.
-            // However, we WANT high scores.
-            // If we cannot get Firestore to do it efficiently without complex indexes,
-            // we might need to fetch more data and sort client side, OR allow the index.
-
-            // Let's try to follow Firestore rules:
-            // "If you include a filter with a range comparison (<, <=, >, >=), your first ordering must be on the same field."
-            // So: .where('tanggal', '>=', ...).orderBy('tanggal')
-            // This means we get recent scores, but NOT necessarily high scores at the top.
-
-            // ALTERNATIVE: Don't use range filter if possible?
-            // Or use an advanced index?
-            // Actually, Firestore CAN support this if we have the index: 
-            // kelasKategori (==), tipeOperasi (==), tanggal (>=), skor (DESC)
-            // But the rule says "your first ordering must be on the same field".
-            // So we MUST orderBy('tanggal').
-
-            // If we must orderBy('tanggal'), then we can't show "Highest Scores of the Week".
-            // Client-side filtering is safer for "High Scores of the Week" if dataset is small.
-            // BUT, if we have thousands of scores...
-
-            // Let's try adding the orderBy 'skor' AFTER 'tanggal' and see if Firestore rejects it or if composite index handles it.
-            // Wait, documentation says: "limitations... first ordering must be on the same field".
-
-            // STRATEGY B: Filter by date on USER SIDE (Client side).
-            // Fetch top 100/200 all time, then filter those that are from this week?
-            // No, that might miss a high score from this week if it's not in the all-time top 100.
-
-            // STRATEGY C: Use "Week ID" string? e.g. "2024-W06".
-            // Then we can use equality filter: where("weekId", "==", "2024-W06").orderBy("skor", "desc").
-            // This is the BEST way for scalability.
-            // BUT we need to update data saving to include 'weekId'.
-            // Since we can't migrate old data easily right now, let's look for a different way.
-
-            // STRATEGY D: Just Try It. Maybe the error message will give a link to an index that allows it?
-            // "You can combine range filter on one field and sort on another." -> NO, usually not without the specific index AND order.
-
-            // Let's try Client-side filtering for "Weekly" for now roughly?
-            // No, user wants real logic.
-
-            // IMPLEMENTATION:
-            // I will use client-side filtering for "Weekly" TO START WITH.
-            // Why? Because it guarantees valid sorting (High Score).
-            // We fetch Top 100 All Time, then filter for this week.
-            // This is 90% good enough for a class/school app (not global scale).
-            // If a kid plays this week and gets a high score, they will be in Top 100 All Time usually.
-            // Only if 100 people play BETTER than them in history will they be hidden.
-            // Correct? Yes.
-
-            // WAIT! The user says: "buat query ke Firebase yang hanya mengambil data skor dari hari Senin minggu ini"
-            // They explicitly asked for a Query.
-
-            // Okay, let's stick to the Query request.
-            // constraints.push(window.firebaseWhere("tanggal", ">=", startOfWeekTimestamp));
-            // constraints.push(window.firebaseOrderBy("tanggal", "asc")); // Required
-            // constraints.push(window.firebaseOrderBy("skor", "desc"));
-
-            // Result: Leaders sorted by Date. Not Score.
-            // This is useless for a leaderboard.
-
-            // Let's check if the client-size sort is acceptable?
-            // Or, we rely on the fact that if we create the index `tanggal ASC, skor DESC`, maybe it works?
-
-            // Let's do Client Side Filter for Weekly to ensure Sort by Score.
-            // Fetch specific "This Week" query might be hard without correct index.
-
-            // RE-READING rule: "In a compound query, range (<, <=, >, >=) and inequality (!=, not-in) comparisons must all filter on the same field."
-            // "If you include a filter with a range comparison, your first ordering must be on the same field."
-
-            // OK, I will save score with a `weekId` field (e.g. `2024-07` for 7th week) going forward?
-            // No, old data won't have it.
-
-            // BETTER HYBRID APPROACH:
-            // fetch 100 items ordered by 'tanggal' descending (Latest).
-            // Then filter locally? Use 'limit(200)'.
-
-            // Let's go with Client-Side Filtering of All Time Data for now, OR
-            // Just fetching All Time Top 50 and filtering by date?
-            // No, that hides new users.
-
-            // Let's TRY the Index Approach. Maybe I'm wrong about the strictness if an index exists.
-
-            // For now, I will implement logic to TOGGLE the constraints.
-            // If Weekly:
-            //   Query: where(op), where(class), where(tanggal >= start). orderBy(tanggal). orderBy(skor).
-            //   Then CLIENT SIDE SORT by Score.
-            //   This allows us to get "This Week's Games", but they come back sorted by Time.
-            //   We fetch say 100.
-            //   Then in Javascript, we sort by Score and take Top 20.
-
-            constraints.push(window.firebaseWhere("tanggal", ">=", startOfWeekTimestamp));
-            // We must orderBy tanggal first
-            constraints.push(window.firebaseOrderBy("tanggal", "desc"));
-            constraints.push(window.firebaseOrderBy("skor", "desc"));
-
-            // We fetch more items to ensure we get high scores
-            constraints.push(window.firebaseLimit(100));
-
-            // We will need to SORT `querySnapshot` results manually by score before rendering.
-
-        } else {
-            // All Time
-            constraints.push(window.firebaseOrderBy("skor", "desc"));
-            constraints.push(window.firebaseOrderBy("waktuRataRata", "asc"));
-            constraints.push(window.firebaseLimit(50));
+        // Pagination: startAfter last document if loading more
+        if (isLoadMore && state.leaderboard.lastDoc) {
+            constraints.push(window.firebaseStartAfter(state.leaderboard.lastDoc));
         }
+
+        // Weekly fetches slightly more to account for client-side date filtering
+        const pageSize = state.leaderboard.filterTime === 'weekly'
+            ? LEADERBOARD_PAGE_SIZE * 3  // 60 docs, filter client-side
+            : LEADERBOARD_PAGE_SIZE;     // 20 docs
+
+        constraints.push(window.firebaseLimit(pageSize));
 
         const q = window.firebaseQuery(scoresRef, ...constraints);
 
-        // Unsubscribe from previous listener if exists
-        if (state.leaderboard.unsubscribe) {
-            state.leaderboard.unsubscribe();
+        // One-time fetch (with offline cache support from IndexedDB persistence)
+        const querySnapshot = await window.firebaseGetDocs(q);
+
+        // Remove loading indicator or "Load More" button
+        if (!isLoadMore) {
+            listEl.innerHTML = '';
+        } else {
+            // Remove the existing "Load More" button
+            const loadMoreBtn = listEl.querySelector('#btn-load-more');
+            if (loadMoreBtn) loadMoreBtn.remove();
         }
 
-        // Real-time listener
-        state.leaderboard.unsubscribe = window.firebaseOnSnapshot(q, (querySnapshot) => {
-            listEl.innerHTML = '';
+        // Save last document for pagination
+        const allDocs = querySnapshot.docs;
+        if (allDocs.length > 0) {
+            state.leaderboard.lastDoc = allDocs[allDocs.length - 1];
+        }
+        state.leaderboard.hasMore = allDocs.length >= pageSize;
 
-            if (querySnapshot.empty) {
-                listEl.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-64 text-slate-500">
-                        <svg class="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <p>Belum ada data peringkat untuk kategori ini.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            let docs = [];
-            querySnapshot.forEach((doc) => {
-                docs.push(doc.data());
-            });
-
-            // Client-side Sort if Weekly (because Firestore forced us to sort by Date)
-            if (state.leaderboard.filterTime === 'weekly') {
-                docs.sort((a, b) => {
-                    // Score Descending
-                    if (b.skor !== a.skor) return b.skor - a.skor;
-                    // Time Ascending
-                    return a.waktuRataRata - b.waktuRataRata;
-                });
-            }
-
-            let rank = 1;
-            docs.forEach((data) => {
-                renderLeaderboardItem(data, rank++);
-            });
-        }, (error) => {
-            // Handle listener error
-            console.error("Error fetching leaderboard: ", error);
-
-            // FALLBACK STRATEGY FOR WEEKLY FILTER
-            // If the specific index is missing, fallback to fetching All Time and filtering client-side
-            if (state.leaderboard.filterTime === 'weekly' && (error.message.includes('index') || error.code === 'failed-precondition')) {
-                console.log("Weekly Index missing. Falling back to Client-Client filtering.");
-                fetchLeaderboardFallback();
-                return;
-            }
-
-            let errorMsg = "Gagal memuat data.";
-            let errorHint = error.message;
-            let indexAction = "";
-
-            // Try to extract the index creation URL from the error message
-            const indexUrlMatch = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
-
-            if (error.message.includes('requires an index') || error.code === 'failed-precondition') {
-                errorMsg = "Sistem Peringkat perlu inisialisasi Database.";
-                if (indexUrlMatch) {
-                    indexAction = `<a href="${indexUrlMatch[0]}" target="_blank" class="block mt-3 bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-4 rounded-lg transition-colors underline decoration-dotted">Klik di sini untuk membuat Index Otomatis</a>`;
-                    errorHint = "Klik tombol di atas untuk memperbaiki database secara otomatis.";
-                } else {
-                    errorHint = "Index Firestore belum dibuat. Buka Developer Console (F12) untuk melihat link pembuatan Index.";
-                }
-            } else if (error.code === 'unavailable') {
-                errorMsg = "Koneksi internet bermasalah atau offline.";
-            } else if (error.code === 'permission-denied') {
-                errorMsg = "Akses Ditolak.";
-                errorHint = "Cek Aturan Keamanan (Security Rules) di Firebase Console.";
-            }
-
-            listEl.innerHTML = `
-                <div class="p-6 text-center text-red-200 bg-red-900/50 rounded-2xl border border-red-500/50 max-w-lg mx-auto">
-                    <svg class="w-12 h-12 mx-auto mb-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                    <h3 class="font-bold text-xl mb-2">${errorMsg}</h3>
-                    <p class="text-sm text-red-300/80 mb-4">${errorHint}</p>
-                    ${indexAction}
-                </div>
-            `;
-            showToast(`Error: ${errorMsg}`, "error");
+        let docs = [];
+        querySnapshot.forEach((doc) => {
+            docs.push(doc.data());
         });
 
-    } catch (e) {
-        console.error("Error setting up listener: ", e);
-        listEl.innerHTML = `<div class="p-4 text-center text-red-400">Gagal menginisialisasi sistem.<br><span class="text-xs text-slate-600">${e.message}</span></div>`;
+        // Client-side date filtering for Weekly
+        if (state.leaderboard.filterTime === 'weekly') {
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const diffToMonday = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            const startOfWeek = new Date(now.getFullYear(), now.getMonth(), diffToMonday, 0, 0, 0, 0);
+
+            docs = docs.filter(data => {
+                if (!data.tanggal) return false;
+                const docDate = new Date(data.tanggal.seconds * 1000);
+                return docDate >= startOfWeek;
+            });
+        }
+
+        // Deduplicate: keep only the best score per person
+        const seen = new Set();
+        docs = docs.filter(data => {
+            const key = (data.nama || '').toLowerCase().trim() + '|' + (data.kelasRaw || '');
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+
+        if (docs.length === 0 && !isLoadMore) {
+            listEl.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-64 text-slate-500">
+                    <svg class="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <p>Belum ada data peringkat untuk kategori ini.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Calculate rank offset for pagination
+        const existingItems = listEl.querySelectorAll('.leaderboard-item');
+        let rank = existingItems.length + 1;
+
+        docs.forEach((data) => {
+            renderLeaderboardItem(data, rank++);
+        });
+
+        // Add "Load More" button if there may be more data
+        if (state.leaderboard.hasMore) {
+            const loadMoreDiv = document.createElement('div');
+            loadMoreDiv.id = 'btn-load-more';
+            loadMoreDiv.innerHTML = `
+                <button onclick="loadMoreLeaderboard()"
+                    class="w-full mt-4 py-3 bg-brand-surface/50 hover:bg-brand-surface border border-brand-border/50 rounded-xl text-brand-text-muted hover:text-brand-text transition-all text-sm font-medium">
+                    Muat Lebih Banyak
+                </button>
+            `;
+            listEl.appendChild(loadMoreDiv);
+        }
+
+    } catch (error) {
+        console.error("Error fetching leaderboard: ", error);
+
+        // FALLBACK STRATEGY FOR WEEKLY FILTER
+        if (state.leaderboard.filterTime === 'weekly' && (error.message.includes('index') || error.code === 'failed-precondition')) {
+            console.log("Weekly Index missing. Falling back to client-side filtering.");
+            fetchLeaderboardFallback();
+            return;
+        }
+
+        let errorMsg = "Gagal memuat data.";
+        let errorHint = error.message;
+        let indexAction = "";
+
+        const indexUrlMatch = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
+
+        if (error.message.includes('requires an index') || error.code === 'failed-precondition') {
+            errorMsg = "Sistem Peringkat perlu inisialisasi Database.";
+            if (indexUrlMatch) {
+                indexAction = `<a href="${indexUrlMatch[0]}" target="_blank" class="block mt-3 bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-4 rounded-lg transition-colors underline decoration-dotted">Klik di sini untuk membuat Index Otomatis</a>`;
+                errorHint = "Klik tombol di atas untuk memperbaiki database secara otomatis.";
+            } else {
+                errorHint = "Index Firestore belum dibuat. Buka Developer Console (F12) untuk melihat link pembuatan Index.";
+            }
+        } else if (error.code === 'unavailable') {
+            errorMsg = "Koneksi internet bermasalah atau offline.";
+        } else if (error.code === 'permission-denied') {
+            errorMsg = "Akses Ditolak.";
+            errorHint = "Cek Aturan Keamanan (Security Rules) di Firebase Console.";
+        }
+
+        listEl.innerHTML = `
+            <div class="p-6 text-center text-red-200 bg-red-900/50 rounded-2xl border border-red-500/50 max-w-lg mx-auto">
+                <svg class="w-12 h-12 mx-auto mb-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <h3 class="font-bold text-xl mb-2">${errorMsg}</h3>
+                <p class="text-sm text-red-300/80 mb-4">${errorHint}</p>
+                ${indexAction}
+            </div>
+        `;
+        showToast(`Error: ${errorMsg}`, "error");
     }
+}
+
+async function loadMoreLeaderboard() {
+    await fetchLeaderboard(true);
 }
 
 // Debug function to fetch raw data
@@ -967,7 +1350,7 @@ function renderLeaderboardItem(data, rank) {
     }
 
     const item = document.createElement('div');
-    item.className = `flex items-center p-4 rounded-xl border ${border} ${rowBg} mb-3 transition-all ${scaleEffect}`;
+    item.className = `leaderboard-item flex items-center p-4 rounded-xl border ${border} ${rowBg} mb-3 transition-all ${scaleEffect}`;
 
     // Format timestamp
     // const date = data.tanggal ? new Date(data.tanggal.seconds * 1000).toLocaleDateString('id-ID') : '-';
@@ -1034,9 +1417,10 @@ function updateFilterUI() {
 window.showLeaderboardScreen = showLeaderboardScreen;
 window.filterLeaderboardClass = filterLeaderboardClass;
 window.filterLeaderboardOp = filterLeaderboardOp;
-window.filterLeaderboardTime = filterLeaderboardTime; // Add this
+window.filterLeaderboardTime = filterLeaderboardTime;
 window.fetchLeaderboard = fetchLeaderboard;
 window.fetchLeaderboardDebug = fetchLeaderboardDebug;
+window.loadMoreLeaderboard = loadMoreLeaderboard;
 // Ensure showMenu is available as well
 window.showMenu = showMenu;
 
@@ -1051,13 +1435,14 @@ function fetchLeaderboardFallback() {
         </div>
     `;
 
-    // Fetch All Time Top 100
+    // Fetch Top 50 using the existing composite index (reduced from 200)
     const scoresRef = window.firebaseCollection(window.firebaseDb, 'scores');
     const q = window.firebaseQuery(scoresRef,
         window.firebaseWhere("tipeOperasi", "==", state.leaderboard.filterOp),
         window.firebaseWhere("kelasKategori", "==", state.leaderboard.filterClass),
         window.firebaseOrderBy("skor", "desc"),
-        window.firebaseLimit(100)
+        window.firebaseOrderBy("waktuRataRata", "asc"),
+        window.firebaseLimit(50)
     );
 
     window.firebaseGetDocs(q).then((snapshot) => {
@@ -1071,24 +1456,30 @@ function fetchLeaderboardFallback() {
             return;
         }
 
-        // Filter by Date Client Side
+        // Filter by Date Client Side (non-mutating date calculation)
         const now = new Date();
-        const day = now.getDay();
-        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-        const startOfWeek = new Date(now.setDate(diff));
-        startOfWeek.setHours(0, 0, 0, 0);
+        const dayOfWeek = now.getDay(); // 0 (Sun) - 6 (Sat)
+        const diffToMonday = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const startOfWeek = new Date(now.getFullYear(), now.getMonth(), diffToMonday, 0, 0, 0, 0);
 
         let docs = [];
         snapshot.forEach((doc) => {
             const data = doc.data();
-            // Check date if available. If not available, assume old (don't show) or show? 
-            // Better to hide if no date.
             if (data.tanggal) {
                 const docDate = new Date(data.tanggal.seconds * 1000);
                 if (docDate >= startOfWeek) {
                     docs.push(data);
                 }
             }
+        });
+
+        // Deduplicate: keep only the best score per person
+        const seen = new Set();
+        docs = docs.filter(data => {
+            const key = (data.nama || '').toLowerCase().trim() + '|' + (data.kelasRaw || '');
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
         });
 
         if (docs.length === 0) {
@@ -1325,6 +1716,292 @@ function renderRaport(mode) {
 
     els.raportMotivation.textContent = `"${motiv}"`
     els.raportEmoji.textContent = emoji;
+
+    // Render Badges in Raport
+    renderBadges('raport-badges', mode);
+}
+
+/**
+ * BADGE SYSTEM LOGIC
+ */
+function checkAchievements() {
+    const mode = state.game.mode;
+    if (!mode || !state.achievements[mode]) return;
+
+    BADGES.forEach(badge => {
+        // If not already unlocked
+        if (!state.achievements[mode].badges.includes(badge.id)) {
+            if (badge.condition(state.achievements[mode])) {
+                unlockBadge(badge.id, mode, false);
+            }
+        }
+    });
+}
+
+function checkAllAchievementsSilent() {
+    ['multiply', 'divide', 'add', 'subtract'].forEach(mode => {
+        if (!state.achievements[mode]) return;
+
+        BADGES.forEach(badge => {
+            if (!state.achievements[mode].badges.includes(badge.id)) {
+                if (badge.condition(state.achievements[mode])) {
+                    unlockBadge(badge.id, mode, true);
+                }
+            }
+        });
+    });
+}
+
+function unlockBadge(badgeId, mode, isSilent) {
+    if (!state.achievements[mode]) return;
+
+    state.achievements[mode].badges.push(badgeId);
+    saveData();
+
+    if (isSilent) return; // Do not show UI if checking quietly on load
+
+    const badge = BADGES.find(b => b.id === badgeId);
+    if (!badge) return;
+
+    // Show Toast
+    const toast = document.getElementById('badge-toast');
+    const title = document.getElementById('badge-toast-title');
+    const desc = document.getElementById('badge-toast-desc');
+
+    if (toast && title && desc) {
+        title.textContent = badge.title;
+        desc.textContent = badge.desc;
+
+        toast.classList.add('show');
+
+        // Play success sound
+        playFeedback(true); // Or a special sound if available
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+}
+
+function renderBadges(containerId, mode) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = '';
+    if (!mode || !state.achievements[mode]) return;
+
+    BADGES.forEach(badge => {
+        const isUnlocked = state.achievements[mode].badges.includes(badge.id);
+        const statusClass = isUnlocked ? 'unlocked' : 'locked';
+
+        const el = document.createElement('div');
+        el.className = `badge-item ${statusClass}`;
+
+        // Tooltip Text Logic
+        // If unlocked: "Diraih pada [Date?]" (We don't store date yet, just text)
+        // If locked: badge.desc (Instruction how to get)
+        const tooltipText = isUnlocked ? 'Badge Telah Diraih!' : badge.desc;
+
+        el.innerHTML = `
+            <div class="badge-icon text-3xl">
+                ${badge.icon}
+            </div>
+            <div class="text-xs font-bold text-center text-brand-text leading-tight">${badge.title}</div>
+            
+            <!-- Tooltip -->
+            <div class="tooltip">
+                ${tooltipText}
+            </div>
+        `;
+
+        // Z-Index fix for locked hover
+        if (!isUnlocked) {
+            el.addEventListener('mouseenter', () => {
+                el.style.zIndex = '50';
+            });
+            el.addEventListener('mouseleave', () => {
+                el.style.zIndex = 'auto';
+            });
+        }
+
+        container.appendChild(el);
+    });
+}
+
+/**
+ * THEME MANANGEMENT
+ */
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    // Default to dark if not set, or follow saved
+    const isLight = savedTheme === 'light';
+
+    if (isLight) {
+        document.documentElement.classList.add('light');
+    } else {
+        document.documentElement.classList.remove('light');
+    }
+    updateThemeIcon(isLight);
+}
+
+function toggleTheme() {
+    const isLight = document.documentElement.classList.toggle('light');
+    localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    updateThemeIcon(isLight);
+}
+
+function updateThemeIcon(isLight) {
+    if (!els.btnTheme) return;
+
+    if (isLight) {
+        // Light Mode -> Show Moon (switch to Dark)
+        els.btnTheme.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+        `;
+        els.btnTheme.classList.add('text-brand-text');
+        els.btnTheme.classList.remove('text-yellow-400');
+        els.btnTheme.classList.remove('text-brand-text-muted');
+    } else {
+        // Dark Mode -> Show Sun (switch to Light)
+        els.btnTheme.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+        `;
+        els.btnTheme.classList.add('text-yellow-400');
+        els.btnTheme.classList.remove('text-brand-text');
+        els.btnTheme.classList.remove('text-brand-text-muted');
+    }
+}
+
+// Start
+/**
+ * ACTIVITY TRACKING & CHART
+ */
+let activityChartInstance = null;
+
+function cleanupActivityLogs() {
+    const today = new Date();
+    const cutoff = new Date();
+    cutoff.setDate(today.getDate() - 10); // Keep last 10 days
+    const cutoffStr = cutoff.toISOString().split('T')[0];
+
+    // Ensure logs exist
+    if (!state.activityLogs) state.activityLogs = {};
+
+    Object.keys(state.activityLogs).forEach(date => {
+        if (date < cutoffStr) {
+            delete state.activityLogs[date];
+        }
+    });
+}
+
+function renderActivityChart() {
+    const ctx = document.getElementById('activity-chart');
+    const emptyState = document.getElementById('activity-empty-state');
+
+    if (!ctx) return;
+
+    // Check if there is any data at all
+    const hasData = state.activityLogs && Object.keys(state.activityLogs).length > 0;
+
+    if (!hasData) {
+        ctx.style.display = 'none';
+        if (emptyState) {
+            emptyState.classList.remove('hidden');
+            emptyState.classList.add('flex');
+        }
+        return;
+    } else {
+        ctx.style.display = 'block';
+        if (emptyState) {
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+        }
+    }
+
+    // Prepare Last 7 Days Data
+    const labels = [];
+    const data = [];
+    const daysIndo = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+
+        labels.push(daysIndo[d.getDay()]);
+        data.push(state.activityLogs[dateStr] || 0);
+    }
+
+    // Determine Theme Colors
+    const isDark = !document.documentElement.classList.contains('light');
+    const colorBar = isDark ? '#22d3ee' : '#6366f1'; // Cyan (Dark) vs Indigo (Light)
+    const colorGrid = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    const colorText = isDark ? '#94a3b8' : '#64748b';
+
+    // Destroy existing chart
+    if (activityChartInstance) {
+        activityChartInstance.destroy();
+    }
+
+    // Create New Chart
+    activityChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Soal Benar',
+                data: data,
+                backgroundColor: colorBar,
+                borderRadius: 6,
+                hoverBackgroundColor: isDark ? '#67e8f9' : '#818cf8',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                    titleColor: isDark ? '#f8fafc' : '#0f172a',
+                    bodyColor: isDark ? '#f8fafc' : '#0f172a',
+                    borderColor: isDark ? '#334155' : '#e2e8f0',
+                    borderWidth: 1,
+                    displayColors: false,
+                    callbacks: {
+                        label: function (context) {
+                            return `${context.raw} Soal Benar`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: colorGrid },
+                    ticks: {
+                        color: colorText,
+                        stepSize: 1, // FORCE INTEGER INTERVAL
+                        precision: 0 // FORCE NO DECIMALS
+                    },
+                    border: { display: false }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: colorText },
+                    border: { display: false }
+                }
+            },
+            animation: {
+                duration: 1000,
+                easing: 'easeOutQuart'
+            }
+        }
+    });
 }
 
 // Start
