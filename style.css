@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@config "./tailwind.config.js";
+@source "./index.html";
+@source "./script.js";
 
 :root {
     /* Default (Dark) Variables */
@@ -65,6 +68,13 @@
     background-color: var(--overlay-color);
 }
 
+/* Force body background to follow theme variable */
+body {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
 /* Custom Styles complementing Tailwind */
 
 /* Keypad Button Style */
@@ -84,6 +94,64 @@
 .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: #334155;
     border-radius: 20px;
+}
+
+/* --- TAIWIND V4 COMPATIBILITY --- */
+/* Manually adding brand utilities that Tailwind v4 strips from the config */
+.bg-brand-dark {
+    background-color: var(--color-brand-dark);
+}
+
+.bg-brand-surface {
+    background-color: var(--color-brand-surface);
+}
+
+.bg-brand-primary {
+    background-color: var(--color-brand-primary);
+}
+
+.bg-brand-secondary {
+    background-color: var(--color-brand-secondary);
+}
+
+.bg-brand-accent {
+    background-color: var(--color-brand-accent);
+}
+
+.text-brand-text {
+    color: var(--color-brand-text);
+}
+
+.text-brand-text-muted {
+    color: var(--color-brand-text-muted);
+}
+
+.text-brand-primary {
+    color: var(--color-brand-primary);
+}
+
+.text-brand-secondary {
+    color: var(--color-brand-secondary);
+}
+
+.text-brand-accent {
+    color: var(--color-brand-accent);
+}
+
+.border-brand-border {
+    border-color: var(--color-brand-border);
+}
+
+.border-brand-primary {
+    border-color: var(--color-brand-primary);
+}
+
+.border-brand-secondary {
+    border-color: var(--color-brand-secondary);
+}
+
+.border-brand-accent {
+    border-color: var(--color-brand-accent);
 }
 
 /* Animations */

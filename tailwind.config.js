@@ -9,11 +9,11 @@ module.exports = {
       },
       colors: {
         brand: {
-          dark: '#0f172a',
+          dark: 'var(--bg-primary)',
           primary: '#6366f1',
           secondary: '#ec4899',
           accent: '#22d3ee',
-          surface: '#1e293b',
+          surface: 'var(--bg-surface)',
           text: 'var(--text-primary)',
           'text-muted': 'var(--text-secondary)',
           border: 'var(--border-color)',

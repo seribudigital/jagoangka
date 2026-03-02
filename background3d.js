@@ -30,9 +30,10 @@ function init() {
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.z = 10;
 
-    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x0f172a, 1); // Dark mode default background
 
     ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
@@ -70,9 +71,19 @@ function init() {
 function update3DTheme(isLight) {
     if (!mainLight || !ambientLight) return;
 
-    const targetOpacity = isLight ? 0.3 : 0.9;
-    const targetIntensity = isLight ? 0.5 : 2;
-    const targetAmbient = isLight ? 0.8 : 0.5;
+    // Update renderer clear color to match theme background
+    if (renderer) {
+        if (isLight) {
+            renderer.setClearColor(0xf1f5f9, 1); // Light mode: slate-100
+        } else {
+            renderer.setClearColor(0x0f172a, 1); // Dark mode: slate-900
+        }
+    }
+
+    // Dark mode should have a fainter glow so it's not blinding
+    const targetOpacity = isLight ? 0.3 : 0.2;
+    const targetIntensity = isLight ? 0.5 : 0.8;
+    const targetAmbient = isLight ? 0.8 : 0.3;
 
     mainLight.intensity = targetIntensity;
     ambientLight.intensity = targetAmbient;
@@ -106,12 +117,12 @@ function createNumericFlow(font) {
 
         const material = new THREE.MeshStandardMaterial({
             color: randomColor,
-            metalness: 0.7,
-            roughness: 0.2,
+            metalness: 0.2,
+            roughness: 0.6,
             emissive: randomColor,
-            emissiveIntensity: 0.3,
+            emissiveIntensity: 0.4,
             transparent: true,
-            opacity: 0.9
+            opacity: 0.8
         });
 
         const mesh = new THREE.Mesh(geometry, material);
