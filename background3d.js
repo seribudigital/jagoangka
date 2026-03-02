@@ -3,6 +3,7 @@ import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
 let scene, camera, renderer, numbers = [];
+let mainLight, ambientLight;
 let mouseX = 0, mouseY = 0;
 let targetX = 0, targetY = 0;
 
@@ -33,22 +34,54 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
-    const mainLight = new THREE.PointLight(0xffffff, 2, 50);
+    mainLight = new THREE.PointLight(0xffffff, 2, 50);
     mainLight.position.set(0, 0, 10);
     scene.add(mainLight);
 
     const loader = new FontLoader();
     loader.load('https://unpkg.com/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json', function (font) {
         createNumericFlow(font);
+
+        // Cek mode awal setelah angka dibuat
+        update3DTheme(document.documentElement.classList.contains('light'));
     });
 
     document.addEventListener('mousemove', onDocumentMouseMove);
     window.addEventListener('resize', onWindowResize);
 
+    // Observer untuk mendengarkan perubahan mode (class 'light' di tag <html>)
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.attributeName === 'class') {
+                const isLight = document.documentElement.classList.contains('light');
+                update3DTheme(isLight);
+            }
+        });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+
     animate();
+}
+
+function update3DTheme(isLight) {
+    if (!mainLight || !ambientLight) return;
+
+    const targetOpacity = isLight ? 0.3 : 0.9;
+    const targetIntensity = isLight ? 0.5 : 2;
+    const targetAmbient = isLight ? 0.8 : 0.5;
+
+    mainLight.intensity = targetIntensity;
+    ambientLight.intensity = targetAmbient;
+
+    numbers.forEach(num => {
+        if (num.material) {
+            num.material.opacity = targetOpacity;
+        }
+    });
 }
 
 function createNumericFlow(font) {

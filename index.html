@@ -18,12 +18,29 @@
     <link rel="stylesheet" href="main.css?v=3">
     <link rel="icon" href="assets/fav.svg" type="image/svg+xml">
     <style>
+        :root {
+            /* Default: Dark-mode glassmorphism values */
+            --glass-bg: rgba(30, 41, 59, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: rgba(0, 0, 0, 0.5);
+            --glass-text-shadow: none;
+        }
+
+        :root.light {
+            /* Light-mode glassmorphism values */
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --glass-shadow: rgba(148, 163, 184, 0.2);
+            --glass-text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
         .glass-effect {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 25px 50px -12px var(--glass-shadow);
+            text-shadow: var(--glass-text-shadow);
         }
     </style>
 </head>
