@@ -37,7 +37,11 @@ const state = {
         multiply: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
         divide: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
         add: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
-        subtract: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] }
+        subtract: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
+        decimal_add: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
+        decimal_subtract: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
+        decimal_multiply: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
+        decimal_divide: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] }
     },
     // New: Activity Logs
     activityLogs: {}, // { "YYYY-MM-DD": count }
@@ -249,7 +253,7 @@ function loadData() {
     }
 
     // Retroactive badge check for 'perfectionist' per-mode
-    ['multiply', 'divide', 'add', 'subtract'].forEach(mode => {
+    ['multiply', 'divide', 'add', 'subtract', 'decimal_add', 'decimal_subtract', 'decimal_multiply', 'decimal_divide'].forEach(mode => {
         if (!state.achievements[mode]) {
             state.achievements[mode] = { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] };
         }
@@ -288,10 +292,14 @@ function saveUser(name, className) {
         // Clear old data when a different user registers
         state.game.history = [];
         state.achievements = {
-            totalCorrect: 0,
-            streak: 0,
-            perfectExams: 0,
-            badges: []
+            multiply: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
+            divide: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
+            add: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
+            subtract: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
+            decimal_add: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
+            decimal_subtract: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
+            decimal_multiply: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] },
+            decimal_divide: { totalCorrect: 0, streak: 0, perfectExams: 0, badges: [] }
         };
         state.activityLogs = {};
         state.weaknesses = {};
@@ -419,6 +427,10 @@ function updateBackground(isWelcome) {
 function showModeSelectModal(operation) {
     state.selectedModeOp = operation;
 
+    // Update modal title based on operation
+    const modeTitle = document.getElementById('mode-select-title');
+    if (modeTitle) modeTitle.textContent = getModeName(operation) || 'Pilih Mode';
+
     // Check if Focused Mode should be available
     const btnFocused = document.getElementById('btn-focused-mode');
     const weakCount = countWeaknesses(operation);
@@ -455,7 +467,7 @@ function updateDashboardRecommendation() {
     let maxWeakness = 0;
     let worstMode = null;
 
-    ['multiply', 'divide', 'add', 'subtract'].forEach(mode => {
+    ['multiply', 'divide', 'add', 'subtract', 'decimal_add', 'decimal_subtract', 'decimal_multiply', 'decimal_divide'].forEach(mode => {
         const count = countWeaknesses(mode);
         if (count > maxWeakness) {
             maxWeakness = count;
@@ -464,13 +476,7 @@ function updateDashboardRecommendation() {
     });
 
     if (maxWeakness > 0 && worstMode) {
-        let modeName = '';
-        switch (worstMode) {
-            case 'multiply': modeName = 'Perkalian'; break;
-            case 'divide': modeName = 'Pembagian'; break;
-            case 'add': modeName = 'Penjumlahan'; break;
-            case 'subtract': modeName = 'Pengurangan'; break;
-        }
+        const modeName = getModeName(worstMode);
 
         hintText.innerHTML = `Kamu punya <b>${maxWeakness} soal sulit</b> di <span class='text-brand-text font-bold'>${modeName}</span>. Yuk, perbaiki nilai kamu!`;
         hintContainer.classList.remove('hidden');
@@ -554,13 +560,7 @@ function initGame(mode, type) {
     state.game.currentAnswer = '';
 
     // Update UI
-    let modeText = '';
-    switch (mode) {
-        case 'multiply': modeText = 'PERKALIAN'; break;
-        case 'divide': modeText = 'PEMBAGIAN'; break;
-        case 'add': modeText = 'PENJUMLAHAN'; break;
-        case 'subtract': modeText = 'PENGURANGAN'; break;
-    }
+    let modeText = getModeName(mode).toUpperCase();
     els.gameModeLabel.textContent = `${modeText} - ${type === 'exam' ? 'UJIAN' : 'LATIHAN'}`;
     updateScoreUI();
 
@@ -625,13 +625,7 @@ function initFocusedGame(mode) {
     state.game.currentAnswer = '';
 
     // Update UI
-    let modeText = '';
-    switch (mode) {
-        case 'multiply': modeText = 'PERKALIAN'; break;
-        case 'divide': modeText = 'PEMBAGIAN'; break;
-        case 'add': modeText = 'PENJUMLAHAN'; break;
-        case 'subtract': modeText = 'PENGURANGAN'; break;
-    }
+    let modeText = getModeName(mode).toUpperCase();
     els.gameModeLabel.textContent = `${modeText} - FOKUS`; // Special label
     updateScoreUI();
 
@@ -709,7 +703,6 @@ function generateSingleQuestion(mode) {
         case 'add':
             a = rand(-10, 10);
             b = rand(-10, 10);
-            // Handle negative display nicely e.g. "5 + (-3)"
             let bStr = b < 0 ? `(${b})` : b;
             q = `${a} + ${bStr}`;
             ans = a + b;
@@ -721,6 +714,52 @@ function generateSingleQuestion(mode) {
             q = `${a} - ${bStr2}`;
             ans = a - b;
             break;
+        case 'decimal_add': {
+            // Pasangan digit: 2+1, 1+2, 2+2, 3+1, 1+3, 3+2, 2+3 (BUKAN 3+3)
+            const addPairs = [[2,1],[1,2],[2,2],[3,1],[1,3],[3,2],[2,3]];
+            const addPair = addPairs[Math.floor(Math.random() * addPairs.length)];
+            a = generateDecimalNumber(addPair[0]);
+            b = generateDecimalNumber(addPair[1]);
+            if (a + b > 100) return generateSingleQuestion(mode);
+            ans = roundTo(a + b, 2);
+            q = `${a} + ${b}`;
+            break;
+        }
+        case 'decimal_subtract': {
+            // Pasangan digit: 2+1, 1+2, 2+2, 3+1, 1+3, 3+2, 2+3 (BUKAN 3+3)
+            const subPairs = [[2,1],[1,2],[2,2],[3,1],[1,3],[3,2],[2,3]];
+            const subPair = subPairs[Math.floor(Math.random() * subPairs.length)];
+            a = generateDecimalNumber(subPair[0]);
+            b = generateDecimalNumber(subPair[1]);
+            // Pastikan a >= b agar selalu positif
+            if (b > a) { const tmp = a; a = b; b = tmp; }
+            ans = roundTo(a - b, 2);
+            q = `${a} - ${b}`;
+            break;
+        }
+        case 'decimal_multiply': {
+            const sigDigits = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+            const scales = [0.01, 0.1, 1];
+            const d1 = sigDigits[Math.floor(Math.random() * sigDigits.length)];
+            const s1 = scales[Math.floor(Math.random() * scales.length)];
+            const d2 = sigDigits[Math.floor(Math.random() * sigDigits.length)];
+            const s2 = scales[Math.floor(Math.random() * scales.length)];
+            a = roundTo(d1 * s1, 3);
+            b = roundTo(d2 * s2, 3);
+            ans = roundTo(a * b, 4);
+            if (ans > 9999 || ans === 0) return generateSingleQuestion(mode);
+            q = `${a} × ${b}`;
+            break;
+        }
+        case 'decimal_divide': {
+            const divisors = [0.1, 0.2, 0.25, 0.4, 0.5, 0.8, 1, 1.5, 2, 2.5, 4, 5, 8, 10];
+            ans = rand(1, 10);
+            b = divisors[Math.floor(Math.random() * divisors.length)];
+            a = roundTo(ans * b, 2);
+            if (a < 1 || a > 100) return generateSingleQuestion(mode);
+            q = `${a} ÷ ${b}`;
+            break;
+        }
     }
 
     return { q, a: ans };
@@ -728,6 +767,44 @@ function generateSingleQuestion(mode) {
 
 function rand(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function roundTo(value, decimals) {
+    const factor = Math.pow(10, decimals);
+    return Math.round(value * factor) / factor;
+}
+
+// Generate angka desimal dengan jumlah digit tertentu
+// 1 digit: 1-9
+// 2 digit: 1.1-9.9 atau 10-99
+// 3 digit: 10.1-99.9 atau 1.01-9.99
+function generateDecimalNumber(digitCount) {
+    switch (digitCount) {
+        case 1:
+            return rand(1, 9);
+        case 2: {
+            const type2 = Math.floor(Math.random() * 2);
+            if (type2 === 0) return roundTo(rand(1, 9) + rand(1, 9) / 10, 1); // X.X (1.1 - 9.9)
+            return rand(10, 99); // XX (10 - 99)
+        }
+        case 3: {
+            const type3 = Math.floor(Math.random() * 2);
+            if (type3 === 0) return roundTo(rand(10, 99) + rand(1, 9) / 10, 1); // XX.X (10.1 - 99.9)
+            return roundTo(rand(1, 9) + rand(1, 99) / 100, 2); // X.XX (1.01 - 9.99)
+        }
+        default:
+            return rand(1, 9);
+    }
+}
+
+function getModeName(mode) {
+    const names = {
+        'multiply': 'Perkalian', 'divide': 'Pembagian',
+        'add': 'Penjumlahan', 'subtract': 'Pengurangan',
+        'decimal_add': 'Penjumlahan Desimal', 'decimal_subtract': 'Pengurangan Desimal',
+        'decimal_multiply': 'Perkalian Desimal', 'decimal_divide': 'Pembagian Desimal'
+    };
+    return names[mode] || mode;
 }
 
 function renderQuestion() {
@@ -744,7 +821,10 @@ function renderQuestion() {
 
 function startQuestionTimer() {
     clearInterval(questionTimerInterval);
-    const limit = GAME_CONFIG.exam.timer * 1000;
+    // Decimal modes get 10 seconds, integer modes get 7 seconds
+    const isDecimal = state.game.mode && state.game.mode.startsWith('decimal_');
+    const timerSeconds = isDecimal ? 10 : GAME_CONFIG.exam.timer;
+    const limit = timerSeconds * 1000;
     let remaining = limit;
     const intervalStep = 50; // Update freq
 
@@ -777,9 +857,14 @@ function handleTimeout() {
 function keypadInput(val) {
     if (val === 'del') {
         state.game.currentAnswer = state.game.currentAnswer.slice(0, -1);
+    } else if (val === '.') {
+        // Allow only one decimal point
+        if (state.game.currentAnswer.includes('.')) return;
+        if (state.game.currentAnswer.length >= 7) return;
+        state.game.currentAnswer += val;
     } else {
         // Limit length
-        if (state.game.currentAnswer.length < 5) {
+        if (state.game.currentAnswer.length < 7) {
             // Prevent multiple minus signs
             if (val === '-' && state.game.currentAnswer.includes('-')) return;
             // Prevent minus not at start
@@ -793,13 +878,23 @@ function keypadInput(val) {
 
 function submitAnswer() {
     if (state.game.isProcessing) return; // Prevent double click
-    if (state.game.currentAnswer === '') return; // Don't submit empty
+    if (state.game.currentAnswer === '' || state.game.currentAnswer === '-' || state.game.currentAnswer === '.') return;
 
     state.game.isProcessing = true; // Lock
-    const userVal = parseInt(state.game.currentAnswer);
+    const isDecimalMode = state.game.mode && state.game.mode.startsWith('decimal_');
+    const userVal = isDecimalMode ? parseFloat(state.game.currentAnswer) : parseInt(state.game.currentAnswer);
     const correctVal = state.game.questions[state.game.currentQuestionIndex].a;
 
-    if (userVal === correctVal) {
+    if (isNaN(userVal)) {
+        state.game.isProcessing = false;
+        return;
+    }
+
+    const isCorrect = isDecimalMode
+        ? Math.abs(userVal - correctVal) < 0.001
+        : userVal === correctVal;
+
+    if (isCorrect) {
         handleCorrect();
     } else {
         handleIncorrect();
@@ -1640,23 +1735,21 @@ function renderRaport(mode) {
     els.raportName.textContent = state.user.name;
     els.raportClass.textContent = state.user.class;
 
-    let modeName = '';
-    switch (mode) {
-        case 'multiply': modeName = 'Perkalian'; break;
-        case 'divide': modeName = 'Pembagian'; break;
-        case 'add': modeName = 'Penjumlahan'; break;
-        case 'subtract': modeName = 'Pengurangan'; break;
-    }
-    els.raportSubject.textContent = `Operasi ${modeName}`;
+    let modeName = getModeName(mode);
     els.raportSubject.textContent = `Operasi ${modeName}`;
     els.raportDate.textContent = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 
     // Generate Exam Description
     const config = GAME_CONFIG.exam;
+    const isDecimalMode = mode && mode.startsWith('decimal_');
+    const examTimer = isDecimalMode ? 10 : config.timer;
     let rangeDesc = "1 sampai 10";
     if (mode === 'add' || mode === 'subtract') rangeDesc = "-10 sampai 10";
+    if (mode === 'decimal_add' || mode === 'decimal_subtract') rangeDesc = "desimal maks 3 digit (contoh: 1.5, 12.3, 5.67)";
+    if (mode === 'decimal_multiply') rangeDesc = "desimal 1 digit signifikan (contoh: 0.3, 0.02, 5)";
+    if (mode === 'decimal_divide') rangeDesc = "desimal 1 sampai 100, hasil bilangan bulat 1-10";
 
-    const desc = `${modeName} acak dari angka ${rangeDesc} sebanyak ${config.count} soal dengan waktu tiap soal ${config.timer} detik.`;
+    const desc = `${modeName} acak dari angka ${rangeDesc} sebanyak ${config.count} soal dengan waktu tiap soal ${examTimer} detik.`;
     els.raportDescription.textContent = desc;
 
     // Fill Table
@@ -1739,7 +1832,7 @@ function checkAchievements() {
 }
 
 function checkAllAchievementsSilent() {
-    ['multiply', 'divide', 'add', 'subtract'].forEach(mode => {
+    ['multiply', 'divide', 'add', 'subtract', 'decimal_add', 'decimal_subtract', 'decimal_multiply', 'decimal_divide'].forEach(mode => {
         if (!state.achievements[mode]) return;
 
         BADGES.forEach(badge => {
@@ -2003,6 +2096,41 @@ function renderActivityChart() {
         }
     });
 }
+
+// Integer Mode Functions
+function showIntegerModeSelect() {
+    document.getElementById('modal-integer-select').classList.remove('hidden');
+}
+
+function closeIntegerSelect() {
+    document.getElementById('modal-integer-select').classList.add('hidden');
+}
+
+function selectIntegerOp(op) {
+    closeIntegerSelect();
+    showModeSelect(op);
+}
+
+// Decimal Mode Functions
+function showDecimalModeSelect() {
+    document.getElementById('modal-decimal-select').classList.remove('hidden');
+}
+
+function closeDecimalSelect() {
+    document.getElementById('modal-decimal-select').classList.add('hidden');
+}
+
+function selectDecimalOp(op) {
+    closeDecimalSelect();
+    showModeSelect(op);
+}
+
+window.showIntegerModeSelect = showIntegerModeSelect;
+window.closeIntegerSelect = closeIntegerSelect;
+window.selectIntegerOp = selectIntegerOp;
+window.showDecimalModeSelect = showDecimalModeSelect;
+window.closeDecimalSelect = closeDecimalSelect;
+window.selectDecimalOp = selectDecimalOp;
 
 // Start
 init();

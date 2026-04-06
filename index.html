@@ -275,90 +275,46 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                <!-- Perkalian -->
-                <button onclick="showModeSelect('multiply')"
-                    class="group relative animated-border delay-0 rounded-3xl p-6 text-left transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-brand-primary/20">
+                <!-- Bilangan Bulat -->
+                <button onclick="showIntegerModeSelect()"
+                    class="group relative animated-border delay-0 rounded-3xl p-6 md:p-8 text-left transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-brand-primary/20">
                     <div
                         class="absolute right-[-20px] bottom-[-20px] w-32 h-32 bg-brand-primary/10 rounded-full blur-2xl group-hover:bg-brand-primary/20 transition-all">
                     </div>
                     <div class="relative z-10 flex items-center gap-5">
                         <div
-                            class="p-4 bg-brand-primary text-brand-text rounded-2xl shadow-lg shadow-brand-primary/30 group-hover:shadow-brand-primary/50 transition-all">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                    d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
+                            class="p-4 bg-gradient-to-br from-brand-primary to-cyan-500 text-white rounded-2xl shadow-lg shadow-brand-primary/30 group-hover:shadow-brand-primary/50 transition-all">
+                            <span class="text-3xl font-bold leading-none">123</span>
                         </div>
                         <div>
-                            <h3 class="text-2xl font-bold text-brand-text mb-1">Perkalian</h3>
-                            <p class="text-brand-text-muted text-sm font-medium">Operasi 1 sampai 10</p>
+                            <h3 class="text-2xl font-bold text-brand-text mb-1">Bilangan Bulat</h3>
+                            <p class="text-brand-text-muted text-sm font-medium">Perkalian, Pembagian, Penjumlahan & Pengurangan</p>
                         </div>
                     </div>
                 </button>
 
-                <!-- Pembagian -->
-                <button onclick="showModeSelect('divide')"
-                    class="group relative animated-border delay-200 rounded-3xl p-6 text-left transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-brand-secondary/20">
+                <!-- Bilangan Desimal -->
+                <button onclick="showDecimalModeSelect()"
+                    class="group relative animated-border delay-200 rounded-3xl p-6 md:p-8 text-left transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-rose-500/20">
                     <div
-                        class="absolute right-[-20px] bottom-[-20px] w-32 h-32 bg-brand-secondary/10 rounded-full blur-2xl group-hover:bg-brand-secondary/20 transition-all">
+                        class="absolute right-[-20px] bottom-[-20px] w-32 h-32 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition-all">
                     </div>
                     <div class="relative z-10 flex items-center gap-5">
                         <div
-                            class="p-4 bg-brand-secondary text-brand-text rounded-2xl shadow-lg shadow-brand-secondary/30 group-hover:shadow-brand-secondary/50 transition-all">
-                            <span class="text-3xl font-bold leading-none">÷</span>
+                            class="p-4 bg-gradient-to-br from-rose-500 to-pink-500 text-white rounded-2xl shadow-lg shadow-rose-500/30 group-hover:shadow-rose-500/50 transition-all">
+                            <span class="text-3xl font-bold leading-none">0.1</span>
                         </div>
                         <div>
-                            <h3 class="text-2xl font-bold text-brand-text mb-1">Pembagian</h3>
-                            <p class="text-brand-text-muted text-sm font-medium">Operasi kebalikan perkalian</p>
-                        </div>
-                    </div>
-                </button>
-
-                <!-- Penjumlahan -->
-                <button onclick="showModeSelect('add')"
-                    class="group relative animated-border delay-400 rounded-3xl p-6 text-left transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-brand-accent/20">
-                    <div
-                        class="absolute right-[-20px] bottom-[-20px] w-32 h-32 bg-brand-accent/10 rounded-full blur-2xl group-hover:bg-brand-accent/20 transition-all">
-                    </div>
-                    <div class="relative z-10 flex items-center gap-5">
-                        <div
-                            class="p-4 bg-brand-accent text-brand-dark rounded-2xl shadow-lg shadow-brand-accent/30 group-hover:shadow-brand-accent/50 transition-all">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
-                                    d="M12 4v16m8-8H4"></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-2xl font-bold text-brand-text mb-1">Penjumlahan</h3>
-                            <p class="text-brand-text-muted text-sm font-medium">Bilangan -10 sampai 10</p>
-                        </div>
-                    </div>
-                </button>
-
-                <!-- Pengurangan -->
-                <button onclick="showModeSelect('subtract')"
-                    class="group relative animated-border delay-600 rounded-3xl p-6 text-left transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-indigo-500/20">
-                    <div
-                        class="absolute right-[-20px] bottom-[-20px] w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all">
-                    </div>
-                    <div class="relative z-10 flex items-center gap-5">
-                        <div
-                            class="p-4 bg-indigo-500 text-brand-text rounded-2xl shadow-lg shadow-indigo-500/30 group-hover:shadow-indigo-500/50 transition-all">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M20 12H4">
-                                </path>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-2xl font-bold text-brand-text mb-1">Pengurangan</h3>
-                            <p class="text-brand-text-muted text-sm font-medium">Bilangan -10 sampai 10</p>
+                            <h3 class="text-2xl font-bold text-brand-text mb-1">Bilangan Desimal</h3>
+                            <p class="text-brand-text-muted text-sm font-medium">Penjumlahan, Pengurangan, Perkalian & Pembagian desimal</p>
                         </div>
                     </div>
                 </button>
             </div>
+
             <!-- Leaderboard Button -->
             <button onclick="showLeaderboardScreen()"
-                class="w-full mt-6 flex items-center justify-center gap-4 animated-border delay-800 rounded-2xl p-5 transition-all group shadow-lg">
+                class="w-full mt-6 flex items-center justify-center gap-4 animated-border delay-400 rounded-2xl p-5 transition-all group shadow-lg">
                 <div
                     class="relative z-10 p-2 bg-yellow-500 text-brand-dark rounded-xl group-hover:scale-110 transition-transform shadow-lg shadow-yellow-500/30">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -441,14 +397,17 @@
                 <button class="btn-numpad" onclick="keypadInput('9')">9</button>
                 <button class="btn-numpad text-brand-secondary" onclick="keypadInput('-')">-</button>
                 <button class="btn-numpad" onclick="keypadInput('0')">0</button>
-                <button class="btn-numpad text-red-400" onclick="keypadInput('del')">
-                    <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z">
-                        </path>
-                    </svg>
-                </button>
+                <button class="btn-numpad text-rose-400 font-bold text-2xl" onclick="keypadInput('.')">.</button>
             </div>
+            <button onclick="keypadInput('del')"
+                class="w-full mt-2 btn-numpad text-red-400 flex items-center justify-center gap-2 py-3">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z">
+                    </path>
+                </svg>
+                <span class="text-sm font-medium">Hapus</span>
+            </button>
             <button onclick="submitAnswer()"
                 class="w-full mt-4 bg-brand-primary hover:bg-brand-primary/90 text-brand-text font-bold py-4 rounded-2xl shadow-lg shadow-brand-primary/25 transition-all text-xl">
                 Jawab
@@ -602,6 +561,156 @@
                         <div>
                             <div class="font-bold text-brand-text text-lg">Lihat Raport</div>
                             <div class="text-sm text-brand-text-muted">Analisis hasil ujianmu.</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6a. INTEGER MODE SELECTION MODAL -->
+        <div id="modal-integer-select"
+            class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+            <div
+                class="bg-brand-dark/80 backdrop-blur-md border border-brand-border rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl relative">
+                <button onclick="closeIntegerSelect()"
+                    class="absolute top-4 right-4 text-brand-text-muted hover:text-brand-text transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="p-2 bg-gradient-to-br from-brand-primary to-cyan-500 text-white rounded-xl">
+                        <span class="text-lg font-bold">123</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-brand-text">Bilangan Bulat</h3>
+                </div>
+                <p class="text-brand-text-muted mb-6">Pilih jenis operasi yang kamu inginkan.</p>
+
+                <div class="grid grid-cols-1 gap-3">
+                    <button onclick="selectIntegerOp('multiply')"
+                        class="flex items-center gap-4 bg-brand-surface/50 hover:bg-brand-surface border border-brand-border hover:border-brand-primary/50 rounded-2xl p-4 transition-all text-left group">
+                        <div class="p-3 bg-brand-primary/20 text-brand-primary rounded-xl group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-bold text-brand-text text-lg">Perkalian</div>
+                            <div class="text-sm text-brand-text-muted">Operasi 1 sampai 10</div>
+                        </div>
+                    </button>
+
+                    <button onclick="selectIntegerOp('divide')"
+                        class="flex items-center gap-4 bg-brand-surface/50 hover:bg-brand-surface border border-brand-border hover:border-brand-secondary/50 rounded-2xl p-4 transition-all text-left group">
+                        <div class="p-3 bg-brand-secondary/20 text-brand-secondary rounded-xl group-hover:scale-110 transition-transform">
+                            <span class="text-2xl font-bold leading-none">÷</span>
+                        </div>
+                        <div>
+                            <div class="font-bold text-brand-text text-lg">Pembagian</div>
+                            <div class="text-sm text-brand-text-muted">Operasi kebalikan perkalian</div>
+                        </div>
+                    </button>
+
+                    <button onclick="selectIntegerOp('add')"
+                        class="flex items-center gap-4 bg-brand-surface/50 hover:bg-brand-surface border border-brand-border hover:border-brand-accent/50 rounded-2xl p-4 transition-all text-left group">
+                        <div class="p-3 bg-brand-accent/20 text-brand-accent rounded-xl group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-bold text-brand-text text-lg">Penjumlahan</div>
+                            <div class="text-sm text-brand-text-muted">Bilangan -10 sampai 10</div>
+                        </div>
+                    </button>
+
+                    <button onclick="selectIntegerOp('subtract')"
+                        class="flex items-center gap-4 bg-brand-surface/50 hover:bg-brand-surface border border-brand-border hover:border-indigo-500/50 rounded-2xl p-4 transition-all text-left group">
+                        <div class="p-3 bg-indigo-500/20 text-indigo-400 rounded-xl group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M20 12H4"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-bold text-brand-text text-lg">Pengurangan</div>
+                            <div class="text-sm text-brand-text-muted">Bilangan -10 sampai 10</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6b. DECIMAL MODE SELECTION MODAL -->
+        <div id="modal-decimal-select"
+            class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+            <div
+                class="bg-brand-dark/80 backdrop-blur-md border border-brand-border rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl relative">
+                <button onclick="closeDecimalSelect()"
+                    class="absolute top-4 right-4 text-brand-text-muted hover:text-brand-text transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="p-2 bg-gradient-to-br from-rose-500 to-pink-500 text-white rounded-xl">
+                        <span class="text-lg font-bold">0.1</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-brand-text">Operasi Desimal</h3>
+                </div>
+                <p class="text-brand-text-muted mb-6">Pilih jenis operasi desimal yang kamu inginkan.</p>
+
+                <div class="grid grid-cols-1 gap-3">
+                    <button onclick="selectDecimalOp('decimal_add')"
+                        class="flex items-center gap-4 bg-brand-surface/50 hover:bg-brand-surface border border-brand-border hover:border-rose-500/50 rounded-2xl p-4 transition-all text-left group">
+                        <div class="p-3 bg-rose-500/20 text-rose-400 rounded-xl group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-bold text-brand-text text-lg">Penjumlahan Desimal</div>
+                            <div class="text-sm text-brand-text-muted">Contoh: 12.5 + 3.7 = ?</div>
+                        </div>
+                    </button>
+
+                    <button onclick="selectDecimalOp('decimal_subtract')"
+                        class="flex items-center gap-4 bg-brand-surface/50 hover:bg-brand-surface border border-brand-border hover:border-rose-500/50 rounded-2xl p-4 transition-all text-left group">
+                        <div class="p-3 bg-pink-500/20 text-pink-400 rounded-xl group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M20 12H4"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-bold text-brand-text text-lg">Pengurangan Desimal</div>
+                            <div class="text-sm text-brand-text-muted">Contoh: 45.8 - 12.3 = ?</div>
+                        </div>
+                    </button>
+
+                    <button onclick="selectDecimalOp('decimal_multiply')"
+                        class="flex items-center gap-4 bg-brand-surface/50 hover:bg-brand-surface border border-brand-border hover:border-rose-500/50 rounded-2xl p-4 transition-all text-left group">
+                        <div class="p-3 bg-fuchsia-500/20 text-fuchsia-400 rounded-xl group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-bold text-brand-text text-lg">Perkalian Desimal</div>
+                            <div class="text-sm text-brand-text-muted">Contoh: 0.3 × 0.02 = ?</div>
+                        </div>
+                    </button>
+
+                    <button onclick="selectDecimalOp('decimal_divide')"
+                        class="flex items-center gap-4 bg-brand-surface/50 hover:bg-brand-surface border border-brand-border hover:border-rose-500/50 rounded-2xl p-4 transition-all text-left group">
+                        <div class="p-3 bg-violet-500/20 text-violet-400 rounded-xl group-hover:scale-110 transition-transform">
+                            <span class="text-2xl font-bold leading-none">÷</span>
+                        </div>
+                        <div>
+                            <div class="font-bold text-brand-text text-lg">Pembagian Desimal</div>
+                            <div class="text-sm text-brand-text-muted">Contoh: 7.2 ÷ 0.8 = ?</div>
                         </div>
                     </button>
                 </div>
@@ -807,6 +916,11 @@
                                 <option value="divide">Pembagian</option>
                                 <option value="add">Penjumlahan</option>
                                 <option value="subtract">Pengurangan</option>
+                                <option disabled>──── Desimal ────</option>
+                                <option value="decimal_add">Desimal: Penjumlahan</option>
+                                <option value="decimal_subtract">Desimal: Pengurangan</option>
+                                <option value="decimal_multiply">Desimal: Perkalian</option>
+                                <option value="decimal_divide">Desimal: Pembagian</option>
                             </select>
                             <div
                                 class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-brand-text">

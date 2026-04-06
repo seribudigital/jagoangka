@@ -26,22 +26,22 @@
 }
 
 :root[class~="light"] {
-    /* Light Mode Variables */
-    --bg-primary: #f1f5f9;
-    /* slate-100 */
-    --bg-surface: #ffffff;
-    /* white */
-    --text-primary: #0f172a;
-    /* slate-900 */
-    --text-secondary: #64748b;
-    /* slate-500 */
+    /* Light Mode Variables — soft warm tones for students */
+    --bg-primary: #e8edf5;
+    /* soft blue-grey */
+    --bg-surface: #f0f2f8;
+    /* light lavender-white */
+    --text-primary: #1e293b;
+    /* slate-800 */
+    --text-secondary: #475569;
+    /* slate-600 */
 
-    --border-color: #cbd5e1;
-    /* slate-300 */
-    --bg-surface-hover: #e2e8f0;
-    /* slate-200 */
-    --overlay-color: rgba(255, 255, 255, 0.85);
-    /* Stronger white overlay */
+    --border-color: #c7cfe0;
+    /* soft blue-grey border */
+    --bg-surface-hover: #dde3f0;
+    /* gentle hover */
+    --overlay-color: rgba(232, 237, 245, 0.92);
+    /* Softer overlay */
 }
 
 @theme {
