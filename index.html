@@ -365,27 +365,27 @@
 
             <!-- Question Area -->
             <div
-                class="flex-1 flex flex-col items-center justify-center glass-effect rounded-3xl border border-brand-border/30 p-8 mb-6 relative overflow-hidden">
+                class="flex-1 flex flex-col items-center justify-center glass-effect rounded-3xl border border-brand-border/30 p-5 md:p-8 mb-4 md:mb-6 relative overflow-hidden">
                 <div id="feedback-anim"
                     class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-300"></div>
 
-                <div class="text-brand-text-muted text-lg mb-2 uppercase tracking-widest font-bold"
+                <div class="text-brand-text-muted text-base md:text-lg mb-1 md:mb-2 uppercase tracking-widest font-bold"
                     id="game-mode-label">
                     Perkalian</div>
-                <div class="text-6xl md:text-7xl font-extrabold text-brand-text mb-8 tracking-tight" id="question-text">
+                <div class="text-5xl md:text-7xl font-extrabold text-brand-text mb-4 md:mb-8 tracking-tight" id="question-text">
                     5 x 8
                 </div>
 
                 <!-- Input Display -->
-                <div class="w-full h-20 bg-slate-900/50 rounded-2xl border-2 border-brand-border flex items-center justify-center mb-4 transition-all"
+                <div class="w-full h-14 md:h-20 bg-slate-900/50 rounded-2xl border-2 border-brand-border flex items-center justify-center mb-2 md:mb-4 transition-all"
                     id="input-display-container">
-                    <span id="user-answer" class="text-4xl font-bold text-brand-accent animate-pulse"></span>
-                    <span class="w-1 h-8 bg-brand-accent ml-1 animate-bounce"></span>
+                    <span id="user-answer" class="text-3xl md:text-4xl font-bold text-brand-accent animate-pulse"></span>
+                    <span class="w-1 h-6 md:h-8 bg-brand-accent ml-1 animate-bounce"></span>
                 </div>
             </div>
 
             <!-- Keypad -->
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-3 gap-2 md:gap-3">
                 <button class="btn-numpad" onclick="keypadInput('1')">1</button>
                 <button class="btn-numpad" onclick="keypadInput('2')">2</button>
                 <button class="btn-numpad" onclick="keypadInput('3')">3</button>
@@ -400,16 +400,16 @@
                 <button class="btn-numpad text-rose-400 font-bold text-2xl" onclick="keypadInput('.')">.</button>
             </div>
             <button onclick="keypadInput('del')"
-                class="w-full mt-2 btn-numpad text-red-400 flex items-center justify-center gap-2 py-3">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="w-full mt-2 md:mt-3 btn-numpad text-red-400 flex items-center justify-center gap-2 !py-2 md:!py-3">
+                <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z">
                     </path>
                 </svg>
-                <span class="text-sm font-medium">Hapus</span>
+                <span class="text-sm md:text-base font-medium">Hapus</span>
             </button>
             <button onclick="submitAnswer()"
-                class="w-full mt-4 bg-brand-primary hover:bg-brand-primary/90 text-brand-text font-bold py-4 rounded-2xl shadow-lg shadow-brand-primary/25 transition-all text-xl">
+                class="w-full mt-3 md:mt-4 bg-brand-primary hover:bg-brand-primary/90 text-brand-text font-bold py-3 md:py-4 rounded-2xl shadow-lg shadow-brand-primary/25 transition-all text-lg md:text-xl">
                 Jawab
             </button>
         </section>
