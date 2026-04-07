@@ -33,39 +33,46 @@ const configSchema = {
         { key: "minA", label: "Min Faktor A" },
         { key: "maxA", label: "Max Faktor A" },
         { key: "minB", label: "Min Faktor B" },
-        { key: "maxB", label: "Max Faktor B" }
+        { key: "maxB", label: "Max Faktor B" },
+        { key: "examTimer", label: "Timer Ujian (Detik)" }
     ],
     "divide": [
         { key: "minDivisor", label: "Min Pembagi" },
         { key: "maxDivisor", label: "Max Pembagi" },
         { key: "minAns", label: "Min Hasil (Ans)" },
-        { key: "maxAns", label: "Max Hasil (Ans)" }
+        { key: "maxAns", label: "Max Hasil (Ans)" },
+        { key: "examTimer", label: "Timer Ujian (Detik)" }
     ],
     "add": [
         { key: "min", label: "Min Angka" },
-        { key: "max", label: "Max Angka" }
+        { key: "max", label: "Max Angka" },
+        { key: "examTimer", label: "Timer Ujian (Detik)" }
     ],
     "subtract": [
         { key: "min", label: "Min Angka" },
-        { key: "max", label: "Max Angka" }
+        { key: "max", label: "Max Angka" },
+        { key: "examTimer", label: "Timer Ujian (Detik)" }
     ],
     "decimal_add": [
         { key: "minBase", label: "Min Base Integer" },
         { key: "maxBase", label: "Max Base Integer" },
         { key: "shiftA", label: "Shift Angka A (contoh: -1)" },
-        { key: "shiftB", label: "Shift Angka B" }
+        { key: "shiftB", label: "Shift Angka B" },
+        { key: "examTimer", label: "Timer Ujian (Detik)" }
     ],
     "decimal_subtract": [
         { key: "minBase", label: "Min Base Integer" },
         { key: "maxBase", label: "Max Base Integer" },
         { key: "shiftA", label: "Shift Angka A" },
-        { key: "shiftB", label: "Shift Angka B" }
+        { key: "shiftB", label: "Shift Angka B" },
+        { key: "examTimer", label: "Timer Ujian (Detik)" }
     ],
     "decimal_multiply": [
         { key: "minBase", label: "Min Base Integer" },
         { key: "maxBase", label: "Max Base Integer" },
         { key: "shiftA", label: "Shift Angka A" },
-        { key: "shiftB", label: "Shift Angka B" }
+        { key: "shiftB", label: "Shift Angka B" },
+        { key: "examTimer", label: "Timer Ujian (Detik)" }
     ],
     "decimal_divide": [
         { key: "minBaseAns", label: "Min Base Hasil Int" },
@@ -73,19 +80,20 @@ const configSchema = {
         { key: "minBaseDivisor", label: "Min Base Pembagi Int" },
         { key: "maxBaseDivisor", label: "Max Base Pembagi Int" },
         { key: "shiftAns", label: "Shift Hasil (0=Bulat, -1=Pecahan)" },
-        { key: "shiftDivisor", label: "Shift Pembagi (-1=Pecahan)" }
+        { key: "shiftDivisor", label: "Shift Pembagi (-1=Pecahan)" },
+        { key: "examTimer", label: "Timer Ujian (Detik)" }
     ]
 };
 
 const defaultFallback = {
-    multiply: { minA: 1, maxA: 10, minB: 1, maxB: 10 },
-    divide: { minDivisor: 1, maxDivisor: 10, minAns: 1, maxAns: 10 },
-    add: { min: -10, max: 10 },
-    subtract: { min: -10, max: 10 },
-    decimal_add: { minBase: 1, maxBase: 99, shiftA: -1, shiftB: -1 },
-    decimal_subtract: { minBase: 1, maxBase: 99, shiftA: -1, shiftB: -1 },
-    decimal_multiply: { minBase: 1, maxBase: 9, shiftA: -1, shiftB: -1 },
-    decimal_divide: { minBaseAns: 1, maxBaseAns: 10, minBaseDivisor: 1, maxBaseDivisor: 10, shiftAns: 0, shiftDivisor: -1 }
+    multiply: { minA: 1, maxA: 10, minB: 1, maxB: 10, examTimer: 7 },
+    divide: { minDivisor: 1, maxDivisor: 10, minAns: 1, maxAns: 10, examTimer: 7 },
+    add: { min: -10, max: 10, examTimer: 7 },
+    subtract: { min: -10, max: 10, examTimer: 7 },
+    decimal_add: { minBase: 1, maxBase: 99, shiftA: -1, shiftB: -1, examTimer: 10 },
+    decimal_subtract: { minBase: 1, maxBase: 99, shiftA: -1, shiftB: -1, examTimer: 10 },
+    decimal_multiply: { minBase: 1, maxBase: 9, shiftA: -1, shiftB: -1, examTimer: 10 },
+    decimal_divide: { minBaseAns: 1, maxBaseAns: 10, minBaseDivisor: 1, maxBaseDivisor: 10, shiftAns: 0, shiftDivisor: -1, examTimer: 10 }
 };
 
 let currentConfigData = {};

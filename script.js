@@ -51,14 +51,14 @@ const state = {
 
     // Dynamic Configuration from Firebase
     appConfig: {
-        multiply: { minA: 1, maxA: 10, minB: 1, maxB: 10 },
-        divide: { minDivisor: 1, maxDivisor: 10, minAns: 1, maxAns: 10 },
-        add: { min: -10, max: 10 },
-        subtract: { min: -10, max: 10 },
-        decimal_add: { minBase: 1, maxBase: 99, shiftA: -1, shiftB: -1 },
-        decimal_subtract: { minBase: 1, maxBase: 99, shiftA: -1, shiftB: -1 },
-        decimal_multiply: { minBase: 1, maxBase: 9, shiftA: -1, shiftB: -1 },
-        decimal_divide: { minBaseAns: 1, maxBaseAns: 10, minBaseDivisor: 1, maxBaseDivisor: 10, shiftAns: 0, shiftDivisor: -1 }
+        multiply: { minA: 1, maxA: 10, minB: 1, maxB: 10, examTimer: 7 },
+        divide: { minDivisor: 1, maxDivisor: 10, minAns: 1, maxAns: 10, examTimer: 7 },
+        add: { min: -10, max: 10, examTimer: 7 },
+        subtract: { min: -10, max: 10, examTimer: 7 },
+        decimal_add: { minBase: 1, maxBase: 99, shiftA: -1, shiftB: -1, examTimer: 10 },
+        decimal_subtract: { minBase: 1, maxBase: 99, shiftA: -1, shiftB: -1, examTimer: 10 },
+        decimal_multiply: { minBase: 1, maxBase: 9, shiftA: -1, shiftB: -1, examTimer: 10 },
+        decimal_divide: { minBaseAns: 1, maxBaseAns: 10, minBaseDivisor: 1, maxBaseDivisor: 10, shiftAns: 0, shiftDivisor: -1, examTimer: 10 }
     }
 };
 
@@ -844,9 +844,8 @@ function renderQuestion() {
 
 function startQuestionTimer() {
     clearInterval(questionTimerInterval);
-    // Decimal modes get 10 seconds, integer modes get 7 seconds
-    const isDecimal = state.game.mode && state.game.mode.startsWith('decimal_');
-    const timerSeconds = isDecimal ? 10 : GAME_CONFIG.exam.timer;
+    const cfg = state.appConfig[state.game.mode];
+    const timerSeconds = cfg && cfg.examTimer ? cfg.examTimer : GAME_CONFIG.exam.timer;
     const limit = timerSeconds * 1000;
     let remaining = limit;
     const intervalStep = 50; // Update freq
