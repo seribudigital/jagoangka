@@ -17,6 +17,7 @@
     <!-- Tailwind Static CSS -->
     <link rel="stylesheet" href="main.css?v=5">
     <link rel="icon" href="assets/fav.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="duel.css?v=1">
     <style>
         :root {
             /* Default: Dark-mode glassmorphism values */
@@ -56,7 +57,8 @@
           "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
           "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
           "firebase/analytics": "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js",
-          "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"
+          "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
+          "firebase/database": "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js"
         }
       }
     </script>
@@ -311,6 +313,18 @@
                     </div>
                 </button>
             </div>
+
+            <!-- Mode Duel Button (New) -->
+            <button onclick="showDuelLobby()"
+                class="w-full mt-6 flex items-center justify-center gap-4 animated-border delay-300 rounded-2xl p-5 transition-all group shadow-lg border border-brand-border/50 bg-gradient-to-br from-orange-500/10 to-red-500/5 hover:from-orange-500/20 hover:to-red-500/10">
+                <div class="relative z-10 p-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl group-hover:scale-110 transition-transform shadow-lg shadow-red-500/30">
+                    <span class="text-2xl leading-none">⚔️</span>
+                </div>
+                <div class="relative z-10 text-left">
+                    <div class="font-bold text-brand-text text-lg">Mode Duel</div>
+                    <div class="text-sm text-brand-text-muted font-medium">Lawan temanmu secara real-time!</div>
+                </div>
+            </button>
 
             <!-- Leaderboard Button -->
             <button onclick="showLeaderboardScreen()"
@@ -965,6 +979,151 @@
             </div>
         </section>
 
+        <!-- 8. DUEL LOBBY SCREEN -->
+        <section id="screen-duel-lobby" class="hidden w-full max-w-md glass-effect border border-brand-border/50 p-8 rounded-3xl shadow-2xl transform transition-all text-center relative z-20">
+            <div class="text-5xl mb-4">⚔️</div>
+            <h2 class="text-3xl font-bold text-brand-text mb-2">Mode Duel</h2>
+            <p class="text-brand-text-muted mb-8">Siapa yang paling cepat dan tepat?</p>
+            <div class="space-y-4">
+                <button onclick="createDuelRoom()" class="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:opacity-90 active:scale-95 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-500/25 transition-all text-lg">
+                    Buat Room
+                </button>
+                <div class="text-brand-text-muted text-sm my-4 font-bold tracking-widest">ATAU</div>
+                <input type="text" id="input-duel-code" maxlength="4" placeholder="KODE ROOM" class="w-full bg-brand-surface border border-brand-border focus:border-red-500 focus:ring-1 focus:ring-red-500 rounded-xl px-4 py-4 text-brand-text text-center font-bold tracking-[0.5em] text-2xl uppercase outline-none transition-all placeholder-slate-500 shadow-inner">
+                <button onclick="joinDuelRoom()" class="w-full border-2 border-red-500/50 hover:border-red-500 hover:bg-red-500/10 active:scale-95 text-red-500 font-bold py-4 rounded-xl transition-all text-lg mt-2">
+                    Gabung Room
+                </button>
+            </div>
+            <button onclick="showMenu()" class="mt-8 text-sm text-brand-text-muted hover:text-brand-text transition-colors">
+                &larr; Kembali ke Menu
+            </button>
+        </section>
+
+        <!-- 9. DUEL WAITING SCREEN -->
+        <section id="screen-duel-waiting" class="hidden w-full max-w-md glass-effect border border-brand-border/50 p-8 rounded-3xl shadow-2xl transform transition-all text-center relative z-20">
+            <div class="text-5xl mb-4 animate-pulse">⏳</div>
+            <h2 class="text-2xl font-bold text-brand-text mb-2">Menunggu Lawan...</h2>
+            <p class="text-brand-text-muted mb-6">Berikan kode ini ke temanmu agar bisa bergabung.</p>
+            <div class="bg-brand-surface border border-brand-border rounded-xl p-6 mb-8 select-all backdrop-blur-sm">
+                <div class="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 tracking-widest text-center drop-shadow-md" id="duel-room-code-display">0000</div>
+            </div>
+            <button onclick="cancelDuel()" class="w-full bg-slate-800 hover:bg-red-500/20 text-brand-text-muted hover:text-red-400 active:scale-95 font-bold py-4 rounded-xl transition-all">
+                Batalkan
+            </button>
+        </section>
+
+        <!-- 10. DUEL GAME SCREEN -->
+        <section id="screen-duel-game" class="hidden w-full max-w-md flex flex-col h-[90vh] relative z-20">
+            <div class="flex justify-between items-center mb-4">
+                <div class="font-bold text-brand-text text-lg flex items-center gap-2">
+                    <span class="text-red-500">⚔️</span> MODE DUEL
+                </div>
+                <div class="bg-brand-surface/80 px-4 py-1.5 rounded-full border border-brand-border text-sm font-bold text-brand-text shadow-sm">
+                    Soal <span id="duel-question-counter" class="text-orange-400">1/10</span>
+                </div>
+            </div>
+
+            <!-- Player VS Board -->
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <!-- P1 (You) -->
+                <div class="glass-effect border border-brand-border rounded-2xl p-3 text-center transition-all duration-300" id="duel-p1-card">
+                    <div class="text-sm font-bold text-brand-text truncate mb-1" id="duel-p1-name">Kamu 🧑</div>
+                    <div class="text-brand-text-muted text-[11px] uppercase tracking-wider mb-2 font-semibold">Skor: <span id="duel-p1-score" class="font-bold text-brand-text text-base">0</span></div>
+                    <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                        <div class="h-full bg-green-500 transition-all duration-500 ease-out" id="duel-p1-progress" style="width: 0%"></div>
+                    </div>
+                </div>
+                <!-- P2 (Opponent) -->
+                <div class="glass-effect border border-brand-border rounded-2xl p-3 text-center transition-all duration-300" id="duel-p2-card">
+                    <div class="text-sm font-bold text-brand-text truncate mb-1" id="duel-p2-name">Lawan 👤</div>
+                    <div class="text-brand-text-muted text-[11px] uppercase tracking-wider mb-2 font-semibold">Skor: <span id="duel-p2-score" class="font-bold text-brand-text text-base">0</span></div>
+                    <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden flex justify-end shadow-inner">
+                        <div class="h-full bg-red-500 transition-all duration-500 ease-out" id="duel-p2-progress" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question Area -->
+            <div class="flex-1 flex flex-col items-center justify-center glass-effect rounded-3xl border border-brand-border/30 p-5 mb-4 relative overflow-hidden transition-all shadow-lg" id="duel-question-wrapper">
+                <div id="duel-feedback-anim" class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-300"></div>
+                <div class="text-5xl md:text-6xl font-extrabold text-brand-text mb-6 md:mb-8 tracking-tight drop-shadow-md" id="duel-question-text">
+                    -
+                </div>
+                <div class="w-full h-16 md:h-20 bg-slate-900/60 rounded-2xl border border-brand-border flex items-center justify-center mb-2 transition-all shadow-inner" id="duel-input-display">
+                    <span id="duel-user-answer" class="text-4xl font-bold text-orange-400 animate-pulse"></span>
+                    <span class="w-1 h-8 bg-orange-400 ml-1 animate-bounce opacity-80"></span>
+                </div>
+                <!-- Opponent Status info -->
+                <div class="h-8 mt-2 flex items-center justify-center text-sm md:text-base font-medium" id="duel-opponent-status">
+                    <!-- Updated by JS -->
+                </div>
+            </div>
+
+            <!-- Keypad -->
+            <div class="grid grid-cols-3 gap-2 md:gap-3">
+                <button class="duel-btn-numpad" onclick="duelKeypad('1')">1</button>
+                <button class="duel-btn-numpad" onclick="duelKeypad('2')">2</button>
+                <button class="duel-btn-numpad" onclick="duelKeypad('3')">3</button>
+                <button class="duel-btn-numpad" onclick="duelKeypad('4')">4</button>
+                <button class="duel-btn-numpad" onclick="duelKeypad('5')">5</button>
+                <button class="duel-btn-numpad" onclick="duelKeypad('6')">6</button>
+                <button class="duel-btn-numpad" onclick="duelKeypad('7')">7</button>
+                <button class="duel-btn-numpad" onclick="duelKeypad('8')">8</button>
+                <button class="duel-btn-numpad" onclick="duelKeypad('9')">9</button>
+                <button class="duel-btn-numpad text-brand-border/50 pointer-events-none text-xl" disabled></button>
+                <button class="duel-btn-numpad" onclick="duelKeypad('0')">0</button>
+                <button class="duel-btn-numpad text-red-500 font-bold" onclick="duelKeypad('del')">Del</button>
+            </div>
+            <button onclick="submitDuelAnswer()" class="w-full mt-3 md:mt-4 bg-gradient-to-r from-orange-500 to-red-600 hover:opacity-90 active:scale-95 text-white font-bold py-4 rounded-2xl shadow-lg transition-all text-xl">
+                Jawab
+            </button>
+        </section>
+
+        <!-- 11. DUEL RESULT SCREEN -->
+        <section id="screen-duel-result" class="hidden w-full max-w-lg glass-effect border border-brand-border/50 p-6 md:p-8 rounded-3xl shadow-2xl h-[85vh] flex flex-col items-center justify-start relative overflow-hidden text-center text-brand-text z-20">
+            <h2 class="text-4xl font-black mb-1 mt-4 tracking-tight" id="duel-result-title">KAMU MENANG!</h2>
+            <p class="text-brand-text-muted mb-6 font-medium" id="duel-result-subtitle">10 Soal Selesai</p>
+            
+            <!-- VS Stats -->
+            <div class="w-full bg-slate-900/60 rounded-2xl border border-brand-border p-5 flex justify-between items-center mb-6 shadow-inner">
+                <div class="text-center w-1/3">
+                    <div class="text-[10px] font-bold text-brand-text-muted uppercase tracking-wider mb-1" id="duel-result-p1-name">Kamu</div>
+                    <div class="text-4xl font-black text-brand-text mb-1" id="duel-result-p1-score">8</div>
+                    <div class="text-xs text-brand-text-muted bg-brand-surface/50 rounded-lg py-1 px-2 inline-block shadow-sm">
+                        <span id="duel-result-p1-time" class="font-bold text-white">12.5</span> dt
+                    </div>
+                </div>
+                <div class="text-2xl font-black opacity-30 italic">VS</div>
+                <div class="text-center w-1/3">
+                    <div class="text-[10px] font-bold text-brand-text-muted uppercase tracking-wider mb-1" id="duel-result-p2-name">Lawan</div>
+                    <div class="text-4xl font-black text-brand-text mb-1" id="duel-result-p2-score">6</div>
+                    <div class="text-xs text-brand-text-muted bg-brand-surface/50 rounded-lg py-1 px-2 inline-block shadow-sm">
+                        <span id="duel-result-p2-time" class="font-bold text-white">14.2</span> dt
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detail List per Question -->
+            <div class="w-full flex justify-between px-3 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-2">
+                <span>Jawabanmu</span>
+                <span>Soal</span>
+                <span>Lawan</span>
+            </div>
+            
+            <div class="flex-1 w-full overflow-y-auto custom-scrollbar text-sm space-y-2 mb-6 px-1" id="duel-result-details">
+                <!-- Injected via JS -->
+            </div>
+
+            <div class="w-full flex gap-3 mt-auto pt-4 border-t border-brand-border/50">
+                <button onclick="showMenu()" class="flex-1 bg-brand-surface hover:bg-brand-surface/80 border border-brand-border text-brand-text font-bold py-4 rounded-xl transition-all active:scale-95">
+                    Ke Menu
+                </button>
+                <button onclick="setupDuelLobby()" class="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:opacity-90 active:scale-95 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-red-500/25">
+                    Main Lagi
+                </button>
+            </div>
+        </section>
+
     </main>
 
     <!-- Overlay & Modals if needed -->
@@ -1001,6 +1160,18 @@
             Timestamp,
             enableIndexedDbPersistence
         } from "firebase/firestore";
+
+        // Import Realtime Database functions
+        import { 
+            getDatabase, 
+            ref, 
+            set, 
+            onValue, 
+            update, 
+            get, 
+            remove, 
+            onDisconnect 
+        } from "firebase/database";
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -1040,10 +1211,22 @@
         window.firebaseStartAfter = startAfter;
         window.firebaseTimestamp = Timestamp;
 
+        // Initialize Realtime Database
+        const rdb = getDatabase(app);
+        window.firebaseDB = rdb;
+        window.firebaseRef = ref;
+        window.firebaseSet = set;
+        window.firebaseOnValue = onValue;
+        window.firebaseUpdate = update;
+        window.firebaseGet = get;
+        window.firebaseRemove = remove;
+        window.firebaseOnDisconnect = onDisconnect;
+
         console.log("Firebase initialized with Firestore + Offline Persistence");
     </script>
     <script type="module" src="background3d.js"></script>
     <script src="script.js?v=5" defer></script>
+    <script src="duel.js?v=1" defer></script>
 </body>
 
 </html>
