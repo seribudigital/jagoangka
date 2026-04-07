@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jago Angka - Admin Dashboard</title>
+    <!-- Google Fonts: Outfit -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind Static CSS -->
+    <link rel="stylesheet" href="main.css?v=5">
+    <style>
+        :root {
+            --glass-bg: rgba(30, 41, 59, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-effect {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 25px 50px -12px var(--glass-shadow);
+        }
+
+        .input-admin {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            color: #fff;
+            margin-top: 0.25rem;
+        }
+
+        .input-admin:focus {
+            outline: none;
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 1px #38bdf8;
+        }
+    </style>
+</head>
+
+<body class="bg-brand-dark text-brand-text font-sans min-h-screen selection:bg-brand-accent selection:text-brand-dark">
+
+    <script type="importmap">
+      {
+        "imports": {
+          "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+          "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
+          "firebase/database": "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js"
+        }
+      }
+    </script>
+
+    <!-- Header -->
+    <header class="w-full p-6 flex justify-between items-center bg-brand-surface/50 border-b border-brand-border/50 backdrop-blur-md sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-accent to-brand-primary">
+                Jago Angka Admin
+            </h1>
+        </div>
+        <button id="btn-logout" class="hidden text-sm bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white px-4 py-2 rounded-lg transition-colors">
+            Logout
+        </button>
+    </header>
+
+    <main class="container mx-auto px-4 py-12 flex flex-col items-center">
+
+        <!-- Login Screen -->
+        <section id="screen-login" class="w-full max-w-md glass-effect p-8 rounded-3xl animate-fade-in">
+            <h2 class="text-2xl font-bold text-center mb-6">Login Administrator</h2>
+            <form id="form-login" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 ml-1">Email</label>
+                    <input type="email" id="input-email" required placeholder="admin@sekolah.com" class="input-admin">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 ml-1">Password</label>
+                    <input type="password" id="input-password" required placeholder="••••••••" class="input-admin">
+                </div>
+                <button type="submit" class="w-full bg-brand-primary hover:bg-brand-primary/90 text-brand-text font-bold py-3 rounded-xl transition-all shadow-lg shadow-brand-primary/25 mt-6">
+                    Login
+                </button>
+            </form>
+            <p id="login-error" class="text-red-400 text-sm text-center mt-4 hidden"></p>
+        </section>
+
+        <!-- Dashboard Screen -->
+        <section id="screen-dashboard" class="hidden w-full max-w-5xl animate-fade-in">
+            <div class="glass-effect p-6 md:p-8 rounded-3xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Konfigurasi Kesulitan Soal</h2>
+                    <button id="btn-save" class="bg-gradient-to-r from-brand-primary to-brand-secondary hover:opacity-90 text-brand-text font-bold px-6 py-2 rounded-xl transition-all shadow-lg flex items-center gap-2">
+                        Simpan Config
+                    </button>
+                </div>
+
+                <div class="space-y-8" id="config-forms">
+                    <!-- Form akan di-generate via JS -->
+                     <p class="text-brand-text-muted">Loading data dari server...</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="admin.js"></script>
+</body>
+</html>

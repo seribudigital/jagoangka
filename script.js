@@ -47,7 +47,19 @@ const state = {
     activityLogs: {}, // { "YYYY-MM-DD": count }
 
     // New: Adaptive Learning
-    weaknesses: {} // { "multiply": { "3x4": { count: 3, q: "3 x 4", a: 12 }, ... } }
+    weaknesses: {}, // { "multiply": { "3x4": { count: 3, q: "3 x 4", a: 12 }, ... } }
+
+    // Dynamic Configuration from Firebase
+    appConfig: {
+        multiply: { minA: 1, maxA: 10, minB: 1, maxB: 10 },
+        divide: { minDivisor: 1, maxDivisor: 10, minAns: 1, maxAns: 10 },
+        add: { min: -10, max: 10 },
+        subtract: { min: -10, max: 10 },
+        decimal_add: { minBase: 1, maxBase: 99, shiftA: -1, shiftB: -1 },
+        decimal_subtract: { minBase: 1, maxBase: 99, shiftA: -1, shiftB: -1 },
+        decimal_multiply: { minBase: 1, maxBase: 9, shiftA: -1, shiftB: -1 },
+        decimal_divide: { minBaseAns: 1, maxBaseAns: 10, minBaseDivisor: 1, maxBaseDivisor: 10, shiftAns: 0, shiftDivisor: -1 }
+    }
 };
 
 /**
@@ -139,6 +151,28 @@ const els = {
 /**
  * INITIALIZATION
  */
+
+async function fetchAppConfig() {
+    if (typeof window.firebaseDB !== 'undefined' && typeof window.firebaseGet !== 'undefined') {
+        try {
+            const configRef = window.firebaseRef(window.firebaseDB, 'appConfig/difficulty');
+            const snapshot = await window.firebaseGet(configRef);
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                for (const mode in data) {
+                    if (state.appConfig[mode]) {
+                        state.appConfig[mode] = { ...state.appConfig[mode], ...data[mode] };
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Gagal mengambil konfigurasi tingkat kesulitan dari Firebase:", e);
+        }
+    } else {
+        setTimeout(fetchAppConfig, 2000);
+    }
+}
+
 function init() {
     loadData();
     initTheme();
@@ -177,6 +211,9 @@ function init() {
     els.btnBackGame.addEventListener('click', showMenu);
     if (els.btnTheme) els.btnTheme.addEventListener('click', toggleTheme);
     if (els.btnSound) els.btnSound.addEventListener('click', toggleMute);
+
+    // Fetch Dynamic Configuration
+    fetchAppConfig();
 }
 
 /**
@@ -686,77 +723,86 @@ function generateFocusedQuestions(mode, count) {
 
 function generateSingleQuestion(mode) {
     let a, b, q, ans;
+    const cfg = state.appConfig[mode];
 
     switch (mode) {
         case 'multiply':
-            a = rand(1, 10);
-            b = rand(1, 10);
+            a = rand(cfg.minA, cfg.maxA);
+            b = rand(cfg.minB, cfg.maxB);
             q = `${a} × ${b}`;
             ans = a * b;
             break;
         case 'divide':
-            b = rand(1, 10); // Divisor
-            ans = rand(1, 10); // Answer
+            b = rand(cfg.minDivisor, cfg.maxDivisor); // Divisor
+            ans = rand(cfg.minAns, cfg.maxAns); // Answer
             a = b * ans; // Dividend
             q = `${a} ÷ ${b}`;
             break;
         case 'add':
-            a = rand(-10, 10);
-            b = rand(-10, 10);
+            a = rand(cfg.min, cfg.max);
+            b = rand(cfg.min, cfg.max);
             let bStr = b < 0 ? `(${b})` : b;
             q = `${a} + ${bStr}`;
             ans = a + b;
             break;
         case 'subtract':
-            a = rand(-10, 10);
-            b = rand(-10, 10);
+            a = rand(cfg.min, cfg.max);
+            b = rand(cfg.min, cfg.max);
             let bStr2 = b < 0 ? `(${b})` : b;
             q = `${a} - ${bStr2}`;
             ans = a - b;
             break;
         case 'decimal_add': {
-            // Pasangan digit: 2+1, 1+2, 2+2, 3+1, 1+3, 3+2, 2+3 (BUKAN 3+3)
-            const addPairs = [[2,1],[1,2],[2,2],[3,1],[1,3],[3,2],[2,3]];
-            const addPair = addPairs[Math.floor(Math.random() * addPairs.length)];
-            a = generateDecimalNumber(addPair[0]);
-            b = generateDecimalNumber(addPair[1]);
-            if (a + b > 100) return generateSingleQuestion(mode);
-            ans = roundTo(a + b, 2);
-            q = `${a} + ${b}`;
+            let baseA = rand(cfg.minBase, cfg.maxBase);
+            let baseB = rand(cfg.minBase, cfg.maxBase);
+            a = baseA * Math.pow(10, cfg.shiftA);
+            b = baseB * Math.pow(10, cfg.shiftB);
+            
+            a = roundTo(a, Math.abs(cfg.shiftA));
+            b = roundTo(b, Math.abs(cfg.shiftB));
+            ans = roundTo(a + b, Math.max(Math.abs(cfg.shiftA), Math.abs(cfg.shiftB)));
+            
+            let bStr3 = b < 0 ? `(${b})` : b;
+            q = `${a} + ${bStr3}`;
             break;
         }
         case 'decimal_subtract': {
-            // Pasangan digit: 2+1, 1+2, 2+2, 3+1, 1+3, 3+2, 2+3 (BUKAN 3+3)
-            const subPairs = [[2,1],[1,2],[2,2],[3,1],[1,3],[3,2],[2,3]];
-            const subPair = subPairs[Math.floor(Math.random() * subPairs.length)];
-            a = generateDecimalNumber(subPair[0]);
-            b = generateDecimalNumber(subPair[1]);
-            // Pastikan a >= b agar selalu positif
+            let baseA = rand(cfg.minBase, cfg.maxBase);
+            let baseB = rand(cfg.minBase, cfg.maxBase);
+            a = baseA * Math.pow(10, cfg.shiftA);
+            b = baseB * Math.pow(10, cfg.shiftB);
+            
+            a = roundTo(a, Math.abs(cfg.shiftA));
+            b = roundTo(b, Math.abs(cfg.shiftB));
+            
+            // Swap to ensure positive answer
             if (b > a) { const tmp = a; a = b; b = tmp; }
-            ans = roundTo(a - b, 2);
+            ans = roundTo(a - b, Math.max(Math.abs(cfg.shiftA), Math.abs(cfg.shiftB)));
             q = `${a} - ${b}`;
             break;
         }
         case 'decimal_multiply': {
-            const sigDigits = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-            const scales = [0.01, 0.1, 1];
-            const d1 = sigDigits[Math.floor(Math.random() * sigDigits.length)];
-            const s1 = scales[Math.floor(Math.random() * scales.length)];
-            const d2 = sigDigits[Math.floor(Math.random() * sigDigits.length)];
-            const s2 = scales[Math.floor(Math.random() * scales.length)];
-            a = roundTo(d1 * s1, 3);
-            b = roundTo(d2 * s2, 3);
-            ans = roundTo(a * b, 4);
-            if (ans > 9999 || ans === 0) return generateSingleQuestion(mode);
+            let baseA = rand(cfg.minBase, cfg.maxBase);
+            let baseB = rand(cfg.minBase, cfg.maxBase);
+            a = baseA * Math.pow(10, cfg.shiftA);
+            b = baseB * Math.pow(10, cfg.shiftB);
+            
+            a = roundTo(a, Math.abs(cfg.shiftA));
+            b = roundTo(b, Math.abs(cfg.shiftB));
+            ans = roundTo(a * b, Math.abs(cfg.shiftA) + Math.abs(cfg.shiftB));
             q = `${a} × ${b}`;
             break;
         }
         case 'decimal_divide': {
-            const divisors = [0.1, 0.2, 0.25, 0.4, 0.5, 0.8, 1, 1.5, 2, 2.5, 4, 5, 8, 10];
-            ans = rand(1, 10);
-            b = divisors[Math.floor(Math.random() * divisors.length)];
-            a = roundTo(ans * b, 2);
-            if (a < 1 || a > 100) return generateSingleQuestion(mode);
+            let baseAns = rand(cfg.minBaseAns, cfg.maxBaseAns);
+            let baseDivisor = rand(cfg.minBaseDivisor, cfg.maxBaseDivisor);
+            ans = baseAns * Math.pow(10, cfg.shiftAns);
+            b = baseDivisor * Math.pow(10, cfg.shiftDivisor);
+            
+            ans = roundTo(ans, Math.abs(cfg.shiftAns));
+            b = roundTo(b, Math.abs(cfg.shiftDivisor));
+            
+            a = roundTo(b * ans, Math.abs(cfg.shiftAns) + Math.abs(cfg.shiftDivisor)); // Dividend
             q = `${a} ÷ ${b}`;
             break;
         }
@@ -772,29 +818,6 @@ function rand(min, max) {
 function roundTo(value, decimals) {
     const factor = Math.pow(10, decimals);
     return Math.round(value * factor) / factor;
-}
-
-// Generate angka desimal dengan jumlah digit tertentu
-// 1 digit: 1-9
-// 2 digit: 1.1-9.9 atau 10-99
-// 3 digit: 10.1-99.9 atau 1.01-9.99
-function generateDecimalNumber(digitCount) {
-    switch (digitCount) {
-        case 1:
-            return rand(1, 9);
-        case 2: {
-            const type2 = Math.floor(Math.random() * 2);
-            if (type2 === 0) return roundTo(rand(1, 9) + rand(1, 9) / 10, 1); // X.X (1.1 - 9.9)
-            return rand(10, 99); // XX (10 - 99)
-        }
-        case 3: {
-            const type3 = Math.floor(Math.random() * 2);
-            if (type3 === 0) return roundTo(rand(10, 99) + rand(1, 9) / 10, 1); // XX.X (10.1 - 99.9)
-            return roundTo(rand(1, 9) + rand(1, 99) / 100, 2); // X.XX (1.01 - 9.99)
-        }
-        default:
-            return rand(1, 9);
-    }
 }
 
 function getModeName(mode) {
