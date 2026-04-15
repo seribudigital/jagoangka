@@ -754,12 +754,10 @@
 
         <div id="screen-raport"
             class="hidden fixed inset-0 z-[70] overflow-y-auto bg-brand-dark flex flex-col items-center justify-start md:justify-center p-4 animate-fade-in pt-20 pb-20 md:pt-4 md:pb-4">
-            <div class="w-full max-w-3xl bg-brand-surface text-brand-text rounded-2xl md:rounded-lg shadow-2xl overflow-y-auto overflow-x-hidden max-h-none md:max-h-[85vh] shrink-0"
+            <div class="relative w-full max-w-3xl bg-brand-surface text-brand-text rounded-2xl md:rounded-lg shadow-2xl overflow-y-auto overflow-x-hidden max-h-none md:max-h-[85vh] shrink-0"
                 id="raport-content">
                 <!-- Decorative Borders -->
-                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-primary to-brand-accent"></div>
-                <div class="absolute bottom-0 left-0 w-full h-2 bg-gradient-to-r from-brand-accent to-brand-primary">
-                </div>
+                <div class="sticky top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-primary to-brand-accent z-10"></div>
 
                 <div class="p-8 md:p-12">
                     <div class="flex justify-between items-start mb-8 border-b-2 border-brand-border pb-6">
@@ -867,6 +865,8 @@
                     </div>
 
                 </div>
+                <!-- Bottom Decorative Border -->
+                <div class="w-full h-2 bg-gradient-to-r from-brand-accent to-brand-primary"></div>
             </div>
 
             <button onclick="closeRaport()"
