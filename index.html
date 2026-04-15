@@ -35,6 +35,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- html2canvas + jsPDF for PDF export -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
     <!-- Tailwind Static CSS -->
     <link rel="stylesheet" href="main.css?v=5">
     <link rel="icon" href="assets/fav.svg" type="image/svg+xml">
@@ -862,13 +865,25 @@
                 <div class="w-full h-2 bg-gradient-to-r from-brand-accent to-brand-primary"></div>
             </div>
 
-            <button onclick="closeRaport()"
-                class="fixed top-6 right-6 bg-brand-surface text-brand-text rounded-full p-3 hover:bg-brand-surface transition-all z-[80]">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                    </path>
-                </svg>
-            </button>
+            <!-- Rapor Action Buttons -->
+            <div class="fixed top-6 right-6 flex items-center gap-3 z-[80]">
+                <button onclick="downloadRaportPDF()" id="btn-download-pdf"
+                    class="bg-brand-primary hover:bg-brand-primary/80 text-white rounded-full p-3 transition-all shadow-lg shadow-brand-primary/30 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
+                    <span class="text-sm font-bold hidden md:inline">Download PDF</span>
+                </button>
+                <button onclick="closeRaport()"
+                    class="bg-brand-surface text-brand-text rounded-full p-3 hover:bg-brand-surface/80 transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
         </div>
 
         <!-- 7. LEADERBOARD SCREEN -->

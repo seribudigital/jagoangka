@@ -530,6 +530,102 @@ function closeRaport() {
     screens.raport.classList.add('hidden');
 }
 
+async function downloadRaportPDF() {
+    const btn = document.getElementById('btn-download-pdf');
+    const content = document.getElementById('raport-content');
+    if (!content) return;
+
+    // Show loading state
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `
+        <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="text-sm font-bold hidden md:inline">Memproses...</span>
+    `;
+
+    try {
+        // Temporarily prepare for capture
+        const origMaxH = content.style.maxHeight;
+        const origOverflow = content.style.overflow;
+        content.style.maxHeight = 'none';
+        content.style.overflow = 'visible';
+
+        // Use html2canvas to capture with white background for print
+        const canvas = await html2canvas(content, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#1e293b',
+            scrollY: 0,
+            scrollX: 0,
+            windowWidth: content.scrollWidth,
+            windowHeight: content.scrollHeight,
+        });
+
+        // Restore original styles
+        content.style.maxHeight = origMaxH;
+        content.style.overflow = origOverflow;
+
+        // Generate PDF using jsPDF
+        const { jsPDF } = window.jspdf;
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+
+        // A4 dimensions in mm
+        const pdfWidth = 210;
+        const pdfHeight = 297;
+        const margin = 10;
+        const contentWidth = pdfWidth - (margin * 2);
+
+        // Scale image to fit A4 width
+        const ratio = contentWidth / imgWidth;
+        const scaledHeight = imgHeight * ratio;
+
+        // Determine orientation and page count
+        const totalPages = Math.ceil(scaledHeight / (pdfHeight - margin * 2));
+        const pdf = new jsPDF('p', 'mm', 'a4');
+
+        for (let page = 0; page < totalPages; page++) {
+            if (page > 0) pdf.addPage();
+
+            const srcY = page * ((pdfHeight - margin * 2) / ratio);
+            const srcH = Math.min((pdfHeight - margin * 2) / ratio, imgHeight - srcY);
+
+            // Create a temporary canvas for this page slice
+            const pageCanvas = document.createElement('canvas');
+            pageCanvas.width = imgWidth;
+            pageCanvas.height = srcH;
+            const ctx = pageCanvas.getContext('2d');
+            ctx.drawImage(canvas, 0, srcY, imgWidth, srcH, 0, 0, imgWidth, srcH);
+
+            const pageImgData = pageCanvas.toDataURL('image/png');
+            const pageScaledH = srcH * ratio;
+            pdf.addImage(pageImgData, 'PNG', margin, margin, contentWidth, pageScaledH);
+        }
+
+        // File name
+        const studentName = (state.user.name || 'Siswa').replace(/\s+/g, '_');
+        const subject = (els.raportSubject.textContent || 'Rapor').replace(/\s+/g, '_');
+        const fileName = `Rapor_${studentName}_${subject}.pdf`;
+
+        pdf.save(fileName);
+        showToast('PDF berhasil diunduh!', 'success');
+
+    } catch (err) {
+        console.error('PDF generation failed:', err);
+        showToast('Gagal membuat PDF. Coba lagi.', 'error');
+    } finally {
+        // Restore button
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+    }
+}
+window.downloadRaportPDF = downloadRaportPDF;
+
 function showLeaderboardScreen() {
     hideAllScreens();
     screens.leaderboard.classList.remove('hidden');
