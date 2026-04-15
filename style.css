@@ -398,17 +398,44 @@ body {
    PRINT STYLES — for "Download PDF" via window.print()
    ============================================ */
 @media print {
-    /* Hide everything except the rapor content */
-    body > *:not(#screen-raport) {
+    /* Hide background canvas, header, and non-essential elements */
+    #bg-canvas,
+    canvas,
+    #app-header,
+    header,
+    #badge-toast,
+    #toast,
+    .fixed:not(#screen-raport) {
         display: none !important;
     }
 
-    /* Hide the action buttons (download + close) */
-    #screen-raport > div:last-child {
+    /* Hide everything inside main except #screen-raport */
+    main > *:not(#screen-raport) {
         display: none !important;
     }
 
-    /* Reset the rapor overlay to be a normal flow element */
+    /* Hide misc body children (background div, etc.) */
+    body > div:not(main) {
+        display: none !important;
+    }
+
+    /* Reset body and main for clean print */
+    body {
+        background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    main {
+        display: block !important;
+        position: static !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        min-height: auto !important;
+        max-width: 100% !important;
+    }
+
+    /* Force show #screen-raport (overrides Tailwind .hidden) */
     #screen-raport {
         display: block !important;
         position: static !important;
@@ -418,6 +445,13 @@ body {
         z-index: auto !important;
         height: auto !important;
         min-height: auto !important;
+        inset: auto !important;
+    }
+
+    /* Hide the action buttons (download + close) */
+    #screen-raport > div.fixed,
+    #screen-raport > div:last-child:not(#raport-content) {
+        display: none !important;
     }
 
     /* Reset the rapor card */
@@ -430,9 +464,11 @@ body {
         box-shadow: none !important;
         background: white !important;
         color: #1e293b !important;
+        width: 100% !important;
     }
 
     /* White background, dark text for print */
+    #raport-content,
     #raport-content * {
         color: #1e293b !important;
         -webkit-print-color-adjust: exact !important;
@@ -447,13 +483,13 @@ body {
         color: #64748b !important;
     }
 
-    /* Primary color text (scores, links) */
+    /* Primary color text (scores) */
     #raport-content .text-brand-primary,
     #raport-content [class*="text-brand-primary"] {
         color: #4f46e5 !important;
     }
 
-    /* Decorative gradient bars — keep them visible with exact colors */
+    /* Decorative gradient bars */
     #raport-content > div:first-child,
     #raport-content > div:last-child {
         height: 4px !important;
@@ -461,7 +497,7 @@ body {
         position: static !important;
     }
 
-    /* Dark background sections → light gray for print */
+    /* Dark background → light gray for print */
     #raport-content [class*="bg-brand-dark"],
     #raport-content [class*="bg-slate-900"],
     #raport-content thead tr {
