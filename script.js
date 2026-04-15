@@ -547,13 +547,88 @@ async function downloadRaportPDF() {
     `;
 
     try {
+        // html2canvas doesn't support oklch() colors used by Tailwind v4.
+        // Inject a temporary override stylesheet to convert all oklch to hex.
+        const overrideStyle = document.createElement('style');
+        overrideStyle.id = 'pdf-color-override';
+        overrideStyle.textContent = `
+            #raport-content, #raport-content * {
+                /* Force all colors to standard values */
+                --color-slate-50: #f8fafc !important;
+                --color-slate-100: #f1f5f9 !important;
+                --color-slate-200: #e2e8f0 !important;
+                --color-slate-300: #cbd5e1 !important;
+                --color-slate-400: #94a3b8 !important;
+                --color-slate-500: #64748b !important;
+                --color-slate-600: #475569 !important;
+                --color-slate-700: #334155 !important;
+                --color-slate-800: #1e293b !important;
+                --color-slate-900: #0f172a !important;
+                --color-slate-950: #020617 !important;
+                --color-indigo-400: #818cf8 !important;
+                --color-indigo-500: #6366f1 !important;
+                --color-indigo-600: #4f46e5 !important;
+                --color-cyan-400: #22d3ee !important;
+                --color-cyan-500: #06b6d4 !important;
+                --color-rose-400: #fb7185 !important;
+                --color-rose-500: #f43f5e !important;
+                --color-yellow-400: #facc15 !important;
+                --color-yellow-500: #eab308 !important;
+                --color-amber-600: #d97706 !important;
+                --color-green-500: #22c55e !important;
+                --color-red-400: #f87171 !important;
+                --color-red-500: #ef4444 !important;
+                --color-pink-500: #ec4899 !important;
+                --color-violet-500: #8b5cf6 !important;
+                --color-fuchsia-500: #d946ef !important;
+                --color-white: #ffffff !important;
+            }
+            #raport-content {
+                color: #f8fafc !important;
+                background-color: #1e293b !important;
+            }
+            #raport-content .text-brand-text { color: #f8fafc !important; }
+            #raport-content .text-brand-text-muted { color: #94a3b8 !important; }
+            #raport-content .text-brand-primary { color: #6366f1 !important; }
+            #raport-content .text-brand-secondary { color: #ec4899 !important; }
+            #raport-content .text-brand-accent { color: #22d3ee !important; }
+            #raport-content .text-slate-400 { color: #94a3b8 !important; }
+            #raport-content .text-slate-500 { color: #64748b !important; }
+            #raport-content .bg-brand-dark { background-color: #0f172a !important; }
+            #raport-content .bg-brand-surface { background-color: #1e293b !important; }
+            #raport-content .border-brand-border { border-color: #334155 !important; }
+            #raport-content .border-slate-100 { border-color: #f1f5f9 !important; }
+            #raport-content .border-brand-primary { border-color: #6366f1 !important; }
+            #raport-content table { border-color: #334155 !important; }
+            #raport-content thead tr { background-color: #0f172a !important; color: #94a3b8 !important; }
+            #raport-content tfoot tr { background-color: #0f172a !important; }
+            #raport-content .from-brand-primary { --tw-gradient-from: #6366f1 !important; }
+            #raport-content .to-brand-accent { --tw-gradient-to: #22d3ee !important; }
+            #raport-content .from-brand-accent { --tw-gradient-from: #22d3ee !important; }
+            #raport-content .to-brand-primary { --tw-gradient-to: #6366f1 !important; }
+            #raport-content .bg-gradient-to-r {
+                background-image: linear-gradient(to right, #6366f1, #22d3ee) !important;
+            }
+            #raport-content .bg-slate-800\\/50, #raport-content .bg-brand-surface\\/50 {
+                background-color: rgba(30, 41, 59, 0.5) !important;
+            }
+            #raport-content .badge-item { background-color: rgba(30, 41, 59, 0.5) !important; border-color: #334155 !important; }
+            #raport-content .badge-item.unlocked { border-color: rgba(234, 179, 8, 0.5) !important; background-color: rgba(234, 179, 8, 0.1) !important; }
+            #raport-content .badge-icon { background-color: #1e293b !important; }
+            #raport-content .badge-item.unlocked .badge-icon { background: linear-gradient(to bottom right, #facc15, #d97706) !important; }
+        `;
+        document.head.appendChild(overrideStyle);
+
         // Temporarily prepare for capture
         const origMaxH = content.style.maxHeight;
         const origOverflow = content.style.overflow;
         content.style.maxHeight = 'none';
         content.style.overflow = 'visible';
 
-        // Use html2canvas to capture with white background for print
+        // Small delay to let styles apply
+        await new Promise(r => setTimeout(r, 100));
+
+        // Use html2canvas to capture
         const canvas = await html2canvas(content, {
             scale: 2,
             useCORS: true,
@@ -565,13 +640,13 @@ async function downloadRaportPDF() {
             windowHeight: content.scrollHeight,
         });
 
-        // Restore original styles
+        // Restore original styles & remove override
         content.style.maxHeight = origMaxH;
         content.style.overflow = origOverflow;
+        overrideStyle.remove();
 
         // Generate PDF using jsPDF
         const { jsPDF } = window.jspdf;
-        const imgData = canvas.toDataURL('image/png');
         const imgWidth = canvas.width;
         const imgHeight = canvas.height;
 
@@ -618,6 +693,9 @@ async function downloadRaportPDF() {
     } catch (err) {
         console.error('PDF generation failed:', err);
         showToast('Gagal membuat PDF. Coba lagi.', 'error');
+        // Cleanup override if still present
+        const leftover = document.getElementById('pdf-color-override');
+        if (leftover) leftover.remove();
     } finally {
         // Restore button
         btn.disabled = false;
