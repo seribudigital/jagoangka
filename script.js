@@ -535,7 +535,6 @@ async function downloadRaportPDF() {
     const content = document.getElementById('raport-content');
     if (!content) return;
 
-    // Show loading state
     const originalHTML = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = `
@@ -547,79 +546,85 @@ async function downloadRaportPDF() {
     `;
 
     try {
-        // html2canvas cannot parse oklch() colors from Tailwind v4.
-        // Strategy: Clone the content, convert ALL computed colors to hex via canvas,
-        // then capture the sanitized clone.
+        // html2canvas cannot parse oklch() from Tailwind v4 CSS.
+        // Fix: Clone DOM, inline ALL computed styles, strip ALL class attributes
+        // so html2canvas never touches the stylesheets.
 
-        // Helper: convert any CSS color (including oklch) to hex using canvas 2d context
         const cvt = document.createElement('canvas').getContext('2d');
-        function toHex(color) {
-            if (!color || color === 'transparent' || color === 'none' || color === 'rgba(0, 0, 0, 0)') return color;
-            try {
-                cvt.fillStyle = '#000'; // reset
-                cvt.fillStyle = color;
-                return cvt.fillStyle; // browser returns hex or rgb
-            } catch (e) {
-                return color;
-            }
+        function colorToRgb(val) {
+            if (!val || val === 'transparent' || val === 'none') return val;
+            if (!val.includes('oklch')) return val;
+            try { cvt.fillStyle = '#000'; cvt.fillStyle = val; return cvt.fillStyle; }
+            catch(e) { return val; }
+        }
+        function fixOklch(str) {
+            if (!str || !str.includes('oklch')) return str;
+            return str.replace(/oklch\([^)]+\)/g, m => colorToRgb(m));
         }
 
-        // Clone the content
+        // Clone content offscreen
         const clone = content.cloneNode(true);
-        clone.id = 'raport-content-clone';
-        clone.style.position = 'fixed';
-        clone.style.left = '-9999px';
-        clone.style.top = '0';
-        clone.style.maxHeight = 'none';
-        clone.style.overflow = 'visible';
-        clone.style.width = content.offsetWidth + 'px';
-        clone.style.zIndex = '-1';
+        clone.removeAttribute('id');
         document.body.appendChild(clone);
 
-        // Walk every element in the ORIGINAL to read computed styles,
-        // then apply hex versions to the CLONE
-        const origEls = content.querySelectorAll('*');
-        const cloneEls = clone.querySelectorAll('*');
+        // Collect original computed styles BEFORE modifying clone
+        const origAll = [content, ...content.querySelectorAll('*')];
+        const cloneAll = [clone, ...clone.querySelectorAll('*')];
 
-        // Also process the root element
-        const allOrigEls = [content, ...origEls];
-        const allCloneEls = [clone, ...cloneEls];
-
-        const colorProps = [
-            'color', 'backgroundColor', 'borderColor',
-            'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor',
-            'outlineColor', 'textDecorationColor', 'caretColor'
+        const styleProps = [
+            'color','backgroundColor','borderColor','borderTopColor','borderRightColor',
+            'borderBottomColor','borderLeftColor','outlineColor','backgroundImage',
+            'boxShadow','textShadow','textDecorationColor',
+            'display','position','top','right','bottom','left',
+            'width','minWidth','maxWidth','height','minHeight','maxHeight',
+            'margin','marginTop','marginRight','marginBottom','marginLeft',
+            'padding','paddingTop','paddingRight','paddingBottom','paddingLeft',
+            'borderWidth','borderStyle','borderRadius',
+            'borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth',
+            'borderTopStyle','borderRightStyle','borderBottomStyle','borderLeftStyle',
+            'borderTopLeftRadius','borderTopRightRadius','borderBottomLeftRadius','borderBottomRightRadius',
+            'fontFamily','fontSize','fontWeight','fontStyle','lineHeight','letterSpacing',
+            'textAlign','textTransform','textDecoration','verticalAlign','whiteSpace',
+            'overflow','overflowX','overflowY','opacity','visibility',
+            'flexDirection','flexWrap','justifyContent','alignItems','alignContent',
+            'flexGrow','flexShrink','flexBasis','gap','rowGap','columnGap',
+            'gridTemplateColumns','gridTemplateRows','gridColumn','gridRow',
+            'tableLayout','borderCollapse','borderSpacing',
+            'wordBreak','overflowWrap','textOverflow','float','clear',
         ];
 
-        for (let i = 0; i < allOrigEls.length; i++) {
-            const computed = window.getComputedStyle(allOrigEls[i]);
-            const cloneEl = allCloneEls[i];
-            if (!cloneEl || !cloneEl.style) continue;
+        for (let i = 0; i < origAll.length; i++) {
+            const comp = window.getComputedStyle(origAll[i]);
+            const el = cloneAll[i];
+            if (!el || !el.style) continue;
 
-            for (const prop of colorProps) {
-                const val = computed[prop];
-                if (val && val.includes('oklch')) {
-                    cloneEl.style[prop] = toHex(val);
+            let css = '';
+            for (const prop of styleProps) {
+                let val = comp[prop];
+                if (!val || val === '' || val === 'normal' || val === 'auto' || val === 'none') {
+                    // Still include some critical 'none' values
+                    if (prop === 'display' && val === 'none') css += 'display:none;';
+                    if (prop === 'backgroundImage' && val === 'none') css += 'background-image:none;';
+                    continue;
                 }
+                const kebab = prop.replace(/[A-Z]/g, m => '-' + m.toLowerCase());
+                val = fixOklch(val);
+                css += `${kebab}:${val};`;
             }
 
-            // Handle background-image (gradients with oklch)
-            const bgImg = computed.backgroundImage;
-            if (bgImg && bgImg.includes('oklch')) {
-                // Replace oklch(...) patterns in gradient strings
-                const fixed = bgImg.replace(/oklch\([^)]+\)/g, (match) => toHex(match));
-                cloneEl.style.backgroundImage = fixed;
+            // Force container styles
+            if (i === 0) {
+                css += `position:fixed;left:-9999px;top:0;max-height:none;overflow:visible;width:${content.offsetWidth}px;z-index:-1;background-color:#1e293b;`;
             }
 
-            // Handle box-shadow
-            const shadow = computed.boxShadow;
-            if (shadow && shadow.includes('oklch')) {
-                const fixed = shadow.replace(/oklch\([^)]+\)/g, (match) => toHex(match));
-                cloneEl.style.boxShadow = fixed;
-            }
+            el.style.cssText = css;
+            el.removeAttribute('class');
         }
 
-        // Capture the sanitized clone
+        // Wait for reflow
+        await new Promise(r => setTimeout(r, 50));
+
+        // Capture
         const canvas = await html2canvas(clone, {
             scale: 2,
             useCORS: true,
@@ -631,59 +636,39 @@ async function downloadRaportPDF() {
             height: clone.scrollHeight,
         });
 
-        // Remove clone
         clone.remove();
 
-        // Generate PDF using jsPDF
+        // Generate PDF
         const { jsPDF } = window.jspdf;
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
-
-        // A4 dimensions in mm
-        const pdfWidth = 210;
-        const pdfHeight = 297;
-        const margin = 10;
-        const contentWidth = pdfWidth - (margin * 2);
-
-        // Scale image to fit A4 width
-        const ratio = contentWidth / imgWidth;
-        const scaledHeight = imgHeight * ratio;
-
-        // Determine page count
-        const totalPages = Math.ceil(scaledHeight / (pdfHeight - margin * 2));
+        const imgW = canvas.width, imgH = canvas.height;
+        const pdfW = 210, pdfH = 297, mg = 10;
+        const cW = pdfW - mg * 2;
+        const ratio = cW / imgW;
+        const pages = Math.ceil((imgH * ratio) / (pdfH - mg * 2));
         const pdf = new jsPDF('p', 'mm', 'a4');
 
-        for (let page = 0; page < totalPages; page++) {
-            if (page > 0) pdf.addPage();
-
-            const srcY = page * ((pdfHeight - margin * 2) / ratio);
-            const srcH = Math.min((pdfHeight - margin * 2) / ratio, imgHeight - srcY);
-
-            const pageCanvas = document.createElement('canvas');
-            pageCanvas.width = imgWidth;
-            pageCanvas.height = srcH;
-            const ctx = pageCanvas.getContext('2d');
-            ctx.drawImage(canvas, 0, srcY, imgWidth, srcH, 0, 0, imgWidth, srcH);
-
-            const pageImgData = pageCanvas.toDataURL('image/png');
-            const pageScaledH = srcH * ratio;
-            pdf.addImage(pageImgData, 'PNG', margin, margin, contentWidth, pageScaledH);
+        for (let p = 0; p < pages; p++) {
+            if (p > 0) pdf.addPage();
+            const srcY = p * ((pdfH - mg * 2) / ratio);
+            const srcH = Math.min((pdfH - mg * 2) / ratio, imgH - srcY);
+            const pc = document.createElement('canvas');
+            pc.width = imgW; pc.height = srcH;
+            pc.getContext('2d').drawImage(canvas, 0, srcY, imgW, srcH, 0, 0, imgW, srcH);
+            pdf.addImage(pc.toDataURL('image/png'), 'PNG', mg, mg, cW, srcH * ratio);
         }
 
-        // File name
-        const studentName = (state.user.name || 'Siswa').replace(/\s+/g, '_');
-        const subject = (els.raportSubject.textContent || 'Rapor').replace(/\s+/g, '_');
-        const fileName = `Rapor_${studentName}_${subject}.pdf`;
-
-        pdf.save(fileName);
+        const sName = (state.user.name || 'Siswa').replace(/\s+/g, '_');
+        const subj = (els.raportSubject.textContent || 'Rapor').replace(/\s+/g, '_');
+        pdf.save(`Rapor_${sName}_${subj}.pdf`);
         showToast('PDF berhasil diunduh!', 'success');
 
     } catch (err) {
         console.error('PDF generation failed:', err);
         showToast('Gagal membuat PDF. Coba lagi.', 'error');
-        // Cleanup clone if still present
-        const leftover = document.getElementById('raport-content-clone');
-        if (leftover) leftover.remove();
+        // Cleanup
+        document.querySelectorAll('body > div:not([id])').forEach(el => {
+            if (el.style.left === '-9999px') el.remove();
+        });
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalHTML;
