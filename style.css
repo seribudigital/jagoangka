@@ -467,6 +467,116 @@ body {
         width: 100% !important;
     }
 
+    /* ---- COMPACT SIZING to fit 1 page ---- */
+    /* Reduce internal padding */
+    #raport-content > div:nth-child(2) {
+        padding: 16px !important;
+    }
+
+    /* Smaller heading */
+    #raport-content h1 {
+        font-size: 1.25rem !important;
+        margin-bottom: 4px !important;
+    }
+
+    /* Smaller sub-labels */
+    #raport-content p {
+        margin-bottom: 2px !important;
+    }
+
+    /* Compact grid gaps */
+    #raport-content .grid {
+        gap: 8px !important;
+        margin-bottom: 12px !important;
+    }
+
+    /* Compact header row */
+    #raport-content .flex.justify-between {
+        margin-bottom: 12px !important;
+        padding-bottom: 8px !important;
+    }
+
+    /* Smaller logo */
+    #raport-content img {
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    /* Compact section headings */
+    #raport-content h3 {
+        font-size: 0.7rem !important;
+        margin-bottom: 6px !important;
+        padding-bottom: 4px !important;
+    }
+
+    /* Compact table */
+    #raport-content th,
+    #raport-content td {
+        padding: 4px 8px !important;
+        font-size: 0.75rem !important;
+    }
+
+    #raport-content .mb-8 {
+        margin-bottom: 10px !important;
+    }
+
+    /* Smaller badges */
+    .badge-icon {
+        width: 36px !important;
+        height: 36px !important;
+        margin-bottom: 4px !important;
+    }
+
+    .badge-item {
+        padding: 6px !important;
+        font-size: 0.65rem !important;
+    }
+
+    /* Compact motivation box */
+    #raport-content [class*="bg-brand-dark"][class*="rounded-lg"] {
+        padding: 8px !important;
+        margin-bottom: 8px !important;
+    }
+
+    #raport-content [class*="bg-brand-dark"][class*="rounded-lg"] .text-4xl {
+        font-size: 1.5rem !important;
+    }
+
+    #raport-content [class*="bg-brand-dark"][class*="rounded-lg"] h4 {
+        font-size: 0.85rem !important;
+        margin-bottom: 2px !important;
+    }
+
+    #raport-content [class*="bg-brand-dark"][class*="rounded-lg"] p {
+        font-size: 0.75rem !important;
+    }
+
+    /* Compact signature area */
+    #raport-content .text-center.pt-8 {
+        padding-top: 8px !important;
+    }
+
+    #raport-content .h-16.w-32 {
+        height: 28px !important;
+    }
+
+    /* General font size reduction */
+    #raport-content .text-xl {
+        font-size: 0.95rem !important;
+    }
+
+    #raport-content .text-lg {
+        font-size: 0.85rem !important;
+    }
+
+    #raport-content .text-sm {
+        font-size: 0.7rem !important;
+    }
+
+    #raport-content .text-xs {
+        font-size: 0.6rem !important;
+    }
+
     /* White background, dark text for print */
     #raport-content,
     #raport-content * {
@@ -577,7 +687,7 @@ body {
     /* Page settings */
     @page {
         size: A4 portrait;
-        margin: 15mm;
+        margin: 10mm;
     }
 
     /* Avoid page breaks inside key sections */
