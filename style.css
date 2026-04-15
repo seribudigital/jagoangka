@@ -393,3 +393,162 @@ body {
 .animate-bounce-custom {
     animation: bounce-custom 0.5s ease-in-out;
 }
+
+/* ============================================
+   PRINT STYLES — for "Download PDF" via window.print()
+   ============================================ */
+@media print {
+    /* Hide everything except the rapor content */
+    body > *:not(#screen-raport) {
+        display: none !important;
+    }
+
+    /* Hide the action buttons (download + close) */
+    #screen-raport > div:last-child {
+        display: none !important;
+    }
+
+    /* Reset the rapor overlay to be a normal flow element */
+    #screen-raport {
+        display: block !important;
+        position: static !important;
+        overflow: visible !important;
+        background: white !important;
+        padding: 0 !important;
+        z-index: auto !important;
+        height: auto !important;
+        min-height: auto !important;
+    }
+
+    /* Reset the rapor card */
+    #raport-content {
+        position: static !important;
+        max-width: 100% !important;
+        max-height: none !important;
+        overflow: visible !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        background: white !important;
+        color: #1e293b !important;
+    }
+
+    /* White background, dark text for print */
+    #raport-content * {
+        color: #1e293b !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Muted text */
+    #raport-content .text-brand-text-muted,
+    #raport-content [class*="text-brand-text-muted"],
+    #raport-content [class*="text-slate-400"],
+    #raport-content [class*="text-slate-500"] {
+        color: #64748b !important;
+    }
+
+    /* Primary color text (scores, links) */
+    #raport-content .text-brand-primary,
+    #raport-content [class*="text-brand-primary"] {
+        color: #4f46e5 !important;
+    }
+
+    /* Decorative gradient bars — keep them visible with exact colors */
+    #raport-content > div:first-child,
+    #raport-content > div:last-child {
+        height: 4px !important;
+        background: linear-gradient(to right, #4f46e5, #06b6d4) !important;
+        position: static !important;
+    }
+
+    /* Dark background sections → light gray for print */
+    #raport-content [class*="bg-brand-dark"],
+    #raport-content [class*="bg-slate-900"],
+    #raport-content thead tr {
+        background-color: #f1f5f9 !important;
+    }
+
+    #raport-content [class*="bg-brand-surface"] {
+        background-color: white !important;
+    }
+
+    /* Table styling */
+    #raport-content table {
+        border-collapse: collapse !important;
+        width: 100% !important;
+    }
+
+    #raport-content th,
+    #raport-content td {
+        border: 1px solid #e2e8f0 !important;
+        padding: 8px 12px !important;
+    }
+
+    #raport-content thead tr th {
+        color: #475569 !important;
+        font-weight: 600 !important;
+    }
+
+    #raport-content tfoot tr {
+        background-color: #f1f5f9 !important;
+        border-top: 2px solid #cbd5e1 !important;
+    }
+
+    /* Border colors */
+    #raport-content [class*="border-brand-border"],
+    #raport-content [class*="border-b"],
+    #raport-content [class*="border-t"] {
+        border-color: #e2e8f0 !important;
+    }
+
+    /* Badge styling for print */
+    .badge-item {
+        background-color: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        break-inside: avoid !important;
+    }
+
+    .badge-item.unlocked {
+        border-color: #d97706 !important;
+        background-color: #fffbeb !important;
+    }
+
+    .badge-icon {
+        background-color: #f1f5f9 !important;
+    }
+
+    .badge-item.unlocked .badge-icon {
+        background: linear-gradient(to bottom right, #facc15, #d97706) !important;
+    }
+
+    /* Motivation box */
+    #raport-content [class*="bg-brand-dark"][class*="rounded-lg"] {
+        background-color: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+
+    /* Logo should print */
+    #raport-content img {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Hide tooltip text */
+    .badge-item .tooltip {
+        display: none !important;
+    }
+
+    /* Page settings */
+    @page {
+        size: A4 portrait;
+        margin: 15mm;
+    }
+
+    /* Avoid page breaks inside key sections */
+    #raport-content .grid,
+    #raport-content table,
+    #raport-content [class*="rounded-lg"],
+    #raport-content .flex {
+        break-inside: avoid !important;
+    }
+}
