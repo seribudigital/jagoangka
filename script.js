@@ -65,6 +65,12 @@ const state = {
 /**
  * CONFIG
  */
+// --- STATE TAMBAHAN UNTUK ANTI-SPAM & ADAPTIVE LEARNING ---
+let spamAnswerCount = 0;
+let questionStartTime = 0;
+let consecutiveCorrectFocusCount = 0;
+let currentFocusCategory = null;
+
 const BADGES = [
     { id: 'speedster', icon: '⚡', title: 'Si Kilat', desc: 'Jawab 5 soal benar berturut-turut dengan cepat', condition: (ach) => ach.streak >= 5 },
     { id: 'math_warrior', icon: '🛡️', title: 'Pejuang Matematika', desc: 'Kumpulkan 50 jawaban benar total', condition: (ach) => ach.totalCorrect >= 50 },
@@ -728,11 +734,79 @@ function generateFocusedQuestions(mode, count) {
     return questions;
 }
 
+function randNegativeOrPositive(min, max) {
+    let val = rand(min, max);
+    return Math.random() > 0.5 ? val : -val; 
+}
+
 function generateSingleQuestion(mode) {
+    if (mode === 'fokus') {
+        let maxErrors = 0;
+        let worstCategory = null;
+        
+        const savedWeaknesses = localStorage.getItem('math_mastery_weaknesses');
+        if (savedWeaknesses) {
+            const weaknesses = JSON.parse(savedWeaknesses);
+            for (let cat in weaknesses) {
+                if (weaknesses[cat].total_salah > maxErrors) {
+                    maxErrors = weaknesses[cat].total_salah;
+                    worstCategory = cat;
+                }
+            }
+        }
+        
+        if (worstCategory) {
+            currentFocusCategory = worstCategory;
+            mode = worstCategory;
+        } else {
+            mode = 'multiply';
+        }
+    } else {
+        currentFocusCategory = null;
+    }
+
     let a, b, q, ans;
-    const cfg = state.appConfig[mode];
+    const baseModeMap = {
+        'penjumlahan_negatif': 'add', 'pengurangan_negatif': 'subtract',
+        'perkalian_negatif': 'multiply', 'pembagian_acak': 'divide', 'desimal': 'decimal_add'
+    };
+    const configMode = baseModeMap[mode] || mode;
+    const cfg = state.appConfig[configMode] || { min: 1, max: 10, minA: 1, maxA: 10, minB: 1, maxB: 10, minDivisor: 2, maxDivisor: 9, minAns: 2, maxAns: 9 };
 
     switch (mode) {
+        case 'penjumlahan_negatif':
+            a = randNegativeOrPositive(cfg.min, cfg.max);
+            b = randNegativeOrPositive(cfg.min, cfg.max);
+            if (a > 0 && b > 0) a = -a; 
+            q = `${a} + ${b < 0 ? `(${b})` : b}`;
+            ans = a + b;
+            break;
+        case 'pengurangan_negatif':
+            a = randNegativeOrPositive(cfg.min, cfg.max);
+            b = randNegativeOrPositive(cfg.min, cfg.max);
+            if (a > 0 && b > 0) b = -b; 
+            q = `${a} - ${b < 0 ? `(${b})` : b}`;
+            ans = a - b;
+            break;
+        case 'perkalian_negatif':
+            a = randNegativeOrPositive(cfg.minA, cfg.maxA);
+            b = randNegativeOrPositive(cfg.minB, cfg.maxB);
+            if (a > 0 && b > 0) a = -a;
+            q = `${a} × ${b < 0 ? `(${b})` : b}`;
+            ans = a * b;
+            break;
+        case 'pembagian_acak':
+            b = rand(cfg.minDivisor, cfg.maxDivisor);
+            ans = randNegativeOrPositive(cfg.minAns, cfg.maxAns);
+            a = b * ans;
+            q = `${a} ÷ ${b}`;
+            break;
+        case 'desimal':
+            a = roundTo((Math.random() * 10) + 1, 1);
+            b = roundTo((Math.random() * 10) + 1, 1);
+            q = `${a} + ${b}`;
+            ans = roundTo(a + b, 1);
+            break;
         case 'multiply':
             a = rand(cfg.minA, cfg.maxA);
             b = rand(cfg.minB, cfg.maxB);
@@ -740,23 +814,21 @@ function generateSingleQuestion(mode) {
             ans = a * b;
             break;
         case 'divide':
-            b = rand(cfg.minDivisor, cfg.maxDivisor); // Divisor
-            ans = rand(cfg.minAns, cfg.maxAns); // Answer
-            a = b * ans; // Dividend
+            b = rand(cfg.minDivisor, cfg.maxDivisor);
+            ans = rand(cfg.minAns, cfg.maxAns);
+            a = b * ans;
             q = `${a} ÷ ${b}`;
             break;
         case 'add':
             a = rand(cfg.min, cfg.max);
             b = rand(cfg.min, cfg.max);
-            let bStr = b < 0 ? `(${b})` : b;
-            q = `${a} + ${bStr}`;
+            q = `${a} + ${b < 0 ? `(${b})` : b}`;
             ans = a + b;
             break;
         case 'subtract':
             a = rand(cfg.min, cfg.max);
             b = rand(cfg.min, cfg.max);
-            let bStr2 = b < 0 ? `(${b})` : b;
-            q = `${a} - ${bStr2}`;
+            q = `${a} - ${b < 0 ? `(${b})` : b}`;
             ans = a - b;
             break;
         case 'decimal_add': {
@@ -764,13 +836,10 @@ function generateSingleQuestion(mode) {
             let baseB = rand(cfg.minBase, cfg.maxBase);
             a = baseA * Math.pow(10, cfg.shiftA);
             b = baseB * Math.pow(10, cfg.shiftB);
-            
             a = roundTo(a, Math.abs(cfg.shiftA));
             b = roundTo(b, Math.abs(cfg.shiftB));
             ans = roundTo(a + b, Math.max(Math.abs(cfg.shiftA), Math.abs(cfg.shiftB)));
-            
-            let bStr3 = b < 0 ? `(${b})` : b;
-            q = `${a} + ${bStr3}`;
+            q = `${a} + ${b < 0 ? `(${b})` : b}`;
             break;
         }
         case 'decimal_subtract': {
@@ -778,11 +847,8 @@ function generateSingleQuestion(mode) {
             let baseB = rand(cfg.minBase, cfg.maxBase);
             a = baseA * Math.pow(10, cfg.shiftA);
             b = baseB * Math.pow(10, cfg.shiftB);
-            
             a = roundTo(a, Math.abs(cfg.shiftA));
             b = roundTo(b, Math.abs(cfg.shiftB));
-            
-            // Swap to ensure positive answer
             if (b > a) { const tmp = a; a = b; b = tmp; }
             ans = roundTo(a - b, Math.max(Math.abs(cfg.shiftA), Math.abs(cfg.shiftB)));
             q = `${a} - ${b}`;
@@ -793,7 +859,6 @@ function generateSingleQuestion(mode) {
             let baseB = rand(cfg.minBase, cfg.maxBase);
             a = baseA * Math.pow(10, cfg.shiftA);
             b = baseB * Math.pow(10, cfg.shiftB);
-            
             a = roundTo(a, Math.abs(cfg.shiftA));
             b = roundTo(b, Math.abs(cfg.shiftB));
             ans = roundTo(a * b, Math.abs(cfg.shiftA) + Math.abs(cfg.shiftB));
@@ -805,11 +870,9 @@ function generateSingleQuestion(mode) {
             let baseDivisor = rand(cfg.minBaseDivisor, cfg.maxBaseDivisor);
             ans = baseAns * Math.pow(10, cfg.shiftAns);
             b = baseDivisor * Math.pow(10, cfg.shiftDivisor);
-            
             ans = roundTo(ans, Math.abs(cfg.shiftAns));
             b = roundTo(b, Math.abs(cfg.shiftDivisor));
-            
-            a = roundTo(b * ans, Math.abs(cfg.shiftAns) + Math.abs(cfg.shiftDivisor)); // Dividend
+            a = roundTo(b * ans, Math.abs(cfg.shiftAns) + Math.abs(cfg.shiftDivisor));
             q = `${a} ÷ ${b}`;
             break;
         }
@@ -842,6 +905,9 @@ function renderQuestion() {
     els.questionText.textContent = curr.q;
     els.userAnswer.textContent = '';
     state.game.currentAnswer = '';
+
+    // [ANTI-SPAM] Catat waktu awal soal dirender
+    questionStartTime = Date.now();
 
     // Reset and start Question Timer if Exam
     if (state.game.type === 'exam') {
@@ -884,6 +950,7 @@ function handleTimeout() {
 }
 
 function keypadInput(val) {
+    if (state.game.isLocked) return;
     if (val === 'del') {
         state.game.currentAnswer = state.game.currentAnswer.slice(0, -1);
     } else if (val === '.') {
@@ -906,10 +973,13 @@ function keypadInput(val) {
 }
 
 function submitAnswer() {
-    if (state.game.isProcessing) return; // Prevent double click
+    if (state.game.isLocked || state.game.isProcessing) return; 
     if (state.game.currentAnswer === '' || state.game.currentAnswer === '-' || state.game.currentAnswer === '.') return;
 
-    state.game.isProcessing = true; // Lock
+    state.game.isProcessing = true; 
+    
+    const answerDurationInSeconds = (Date.now() - questionStartTime) / 1000;
+
     const isDecimalMode = state.game.mode && state.game.mode.startsWith('decimal_');
     const userVal = isDecimalMode ? parseFloat(state.game.currentAnswer) : parseInt(state.game.currentAnswer);
     const correctVal = state.game.questions[state.game.currentQuestionIndex].a;
@@ -923,11 +993,50 @@ function submitAnswer() {
         ? Math.abs(userVal - correctVal) < 0.001
         : userVal === correctVal;
 
+    if (!isCorrect && answerDurationInSeconds < 1.5) {
+        spamAnswerCount++;
+        if (spamAnswerCount >= 3) {
+            triggerAntiSpamLock();
+            return;
+        }
+    } else {
+        spamAnswerCount = 0; 
+    }
+
     if (isCorrect) {
         handleCorrect();
+        
+        if (currentFocusCategory) {
+            consecutiveCorrectFocusCount++;
+            if (consecutiveCorrectFocusCount >= 5) {
+                if (state.weaknesses[currentFocusCategory] && state.weaknesses[currentFocusCategory].total_salah > 0) {
+                    state.weaknesses[currentFocusCategory].total_salah -= 2; 
+                    if (state.weaknesses[currentFocusCategory].total_salah < 0) {
+                        state.weaknesses[currentFocusCategory].total_salah = 0;
+                    }
+                    localStorage.setItem('math_mastery_weaknesses', JSON.stringify(state.weaknesses));
+                    showToast("Luar Biasa! Pemahamanmu di materi ini meningkat pesat! 🌟", "success");
+                }
+                consecutiveCorrectFocusCount = 0; 
+            }
+        }
     } else {
+        consecutiveCorrectFocusCount = 0; 
         handleIncorrect();
     }
+}
+
+function triggerAntiSpamLock() {
+    state.game.isLocked = true; 
+    alert("Hei, jangan asal menebak. Tarik napas, hitung pelan-pelan ya! 😉");
+    setTimeout(() => {
+        state.game.isLocked = false;
+        spamAnswerCount = 0; 
+        state.game.isProcessing = false; 
+        state.game.currentAnswer = '';
+        els.userAnswer.textContent = '';
+        questionStartTime = Date.now(); 
+    }, 3000);
 }
 
 function handleCorrect() {
@@ -1075,45 +1184,42 @@ function endGame() {
 /**
  * ADAPTIVE LEARNING SYSTEM
  */
+function getQuestionCategory(mode, questionText) {
+    if (mode && mode.startsWith('decimal')) return 'desimal';
+    
+    const hasNegative = questionText.includes('(-') || questionText.startsWith('-');
+    
+    if (mode === 'add' && hasNegative) return 'penjumlahan_negatif';
+    if (mode === 'subtract' && hasNegative) return 'pengurangan_negatif';
+    if (mode === 'multiply' && hasNegative) return 'perkalian_negatif';
+    if (mode === 'divide') return 'pembagian_acak';
+    
+    return mode;
+}
+
 function trackWeakness(questionText, answer, mode, isCorrect) {
-    // Ensure mode object exists
-    if (!state.weaknesses[mode]) {
-        state.weaknesses[mode] = {};
+    if (!state.weaknesses) state.weaknesses = {};
+    
+    const category = getQuestionCategory(mode, questionText);
+
+    if (!state.weaknesses[category]) {
+        state.weaknesses[category] = {
+            total_salah: 0,
+            contoh_kasus: []
+        };
     }
 
-    const key = questionText.replace(/\s/g, ''); // Remove spaces for key e.g. "3x4"
-
-    if (isCorrect) {
-        // Recovering / Mastery
-        if (state.weaknesses[mode][key]) {
-            state.weaknesses[mode][key].count--;
-
-            // Visual Reward if mastery happens (count drops to 0 or below)
-            // But let's just show "Good Job" if it WAS a weakness.
-            if (state.weaknesses[mode][key].count <= 0) {
-                delete state.weaknesses[mode][key];
-                showToast("Mantap! Kelemahanmu berkurang! 💪", "success");
-            } else {
-                // Still weak but improving
+    if (!isCorrect) {
+        state.weaknesses[category].total_salah++;
+        
+        if (!state.weaknesses[category].contoh_kasus.includes(questionText)) {
+            state.weaknesses[category].contoh_kasus.push(questionText);
+            if (state.weaknesses[category].contoh_kasus.length > 5) {
+                state.weaknesses[category].contoh_kasus.shift();
             }
         }
-    } else {
-        // Incorrect
-        if (!state.weaknesses[mode][key]) {
-            state.weaknesses[mode][key] = {
-                q: questionText,
-                a: answer,
-                count: 0
-            };
-        }
-        state.weaknesses[mode][key].count++;
-
-        // Only persist if count > 2? Or just persist all failures and filter later?
-        // Requirement: "dijawab salah lebih dari 2 kali".
-        // Let's count every error, but only consider it a "Weakness" for Focused Mode if count > 2.
+        localStorage.setItem('math_mastery_weaknesses', JSON.stringify(state.weaknesses));
     }
-
-    // Auto-save happens in handleCorrect/handleIncorrect via saveData()
 }
 
 // Show Toast Helper (if not exists, create simple one)
