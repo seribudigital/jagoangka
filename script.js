@@ -1202,7 +1202,7 @@ function trackWeakness(questionText, answer, mode, isCorrect) {
     
     const category = getQuestionCategory(mode, questionText);
 
-    if (!state.weaknesses[category]) {
+    if (!state.weaknesses[category] || typeof state.weaknesses[category].total_salah === 'undefined') {
         state.weaknesses[category] = {
             total_salah: 0,
             contoh_kasus: []
