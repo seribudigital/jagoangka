@@ -4,6 +4,7 @@
  * STATE MANAGEMENT
  */
 const state = {
+    appMode: 'pemantauan', // 'pemantauan' or 'remedial' or 'duel'
     user: {
         name: '',
         class: '',
@@ -95,7 +96,7 @@ const screens = {
     results: document.getElementById('screen-results'),
     modalMode: document.getElementById('modal-mode-select'),
     raport: document.getElementById('screen-raport'),
-    leaderboard: document.getElementById('screen-leaderboard')
+    modeSelection: document.getElementById('screen-mode-selection')
 };
 
 const els = {
@@ -139,6 +140,7 @@ const els = {
 
     // Raport
     raportName: document.getElementById('raport-name'),
+    raportMainTitle: document.getElementById('raport-main-title'),
     raportClass: document.getElementById('raport-class'),
     raportSubject: document.getElementById('raport-subject'),
     raportDate: document.getElementById('raport-date'),
@@ -339,7 +341,7 @@ function init() {
 
     // Check if user exists
     if (state.user.name) {
-        showMenu();
+        showModeSelection();
     } else {
         showLanding();
     }
@@ -381,7 +383,7 @@ function init() {
         }
 
         saveUser(name, className, pin);
-        showMenu();
+        showModeSelection();
     });
 
     els.btnHistory.addEventListener('click', () => {
@@ -583,7 +585,7 @@ function showLanding() {
 
 function handleLandingAction() {
     if (state.user.name) {
-        showMenu();
+        showModeSelection();
     } else {
         showWelcome();
     }
@@ -593,6 +595,24 @@ window.showWelcome = showWelcome;
 window.showLanding = showLanding;
 window.handleLandingAction = handleLandingAction;
 window.startFocusedPractice = startFocusedPractice;
+
+function showModeSelection() {
+    hideAllScreens();
+    screens.modeSelection.classList.remove('hidden');
+    els.header.classList.remove('hidden');
+    updateBackground(false);
+}
+window.showModeSelection = showModeSelection;
+
+function selectAppMode(mode) {
+    state.appMode = mode;
+    if (mode === 'duel') {
+        showDuelLobby();
+    } else {
+        showMenu();
+    }
+}
+window.selectAppMode = selectAppMode;
 
 function showMenu() {
     try {
@@ -823,7 +843,12 @@ let questionTimerInterval;
 
 // Called by menu buttons now triggers modal
 function showModeSelect(operation) {
-    showModeSelectModal(operation);
+    state.selectedModeOp = operation;
+    if (state.appMode === 'remedial') {
+        startExam();
+    } else {
+        showModeSelectModal(operation);
+    }
 }
 
 function startTraining() {
@@ -835,13 +860,17 @@ function startTraining() {
 function startExam() {
     if (!state.selectedModeOp) return;
     const mode = state.selectedModeOp;
-    const mStatus = state.user.monitoring_status?.[mode];
-    if (mStatus && mStatus.active) {
-        const minPracticeScore = state.appConfig.global_settings?.minPracticeScore || 70;
-        alert(`🔒 UJIAN TERKUNCI!\nKamu sedang dalam pemantauan. Selesaikan ${mStatus.exercises_needed - (mStatus.exercises_done || 0)} Latihan lagi dengan nilai minimal ${minPracticeScore} untuk membuka ujian.`);
-        closeModeSelect();
-        return;
+    
+    // Remedial bypasses all locks
+    if (state.appMode !== 'remedial') {
+        const mStatus = state.user.monitoring_status?.[mode];
+        if (mStatus && mStatus.active) {
+            const minPracticeScore = state.appConfig.global_settings?.minPracticeScore || 70;
+            alert(`🔒 UJIAN TERKUNCI!\nKamu sedang dalam pemantauan. Selesaikan ${mStatus.exercises_needed - (mStatus.exercises_done || 0)} Latihan lagi dengan nilai minimal ${minPracticeScore} untuk membuka ujian.`);
+            return;
+        }
     }
+    
     initGame(mode, 'exam');
     closeModeSelect();
 }
@@ -1615,13 +1644,13 @@ async function saveScoreToFirestore(data) {
     }
 
     try {
-        const collectionRef = window.firebaseCollection(window.firebaseDb, 'scores');
+        let collectionName = state.appMode === 'remedial' ? 'remedial_exams' : 'scores';
+        const collectionRef = window.firebaseCollection(window.firebaseDb, collectionName);
 
         // Prepare data with proper types
         const docData = {
             nama: data.user.name,
             kelasRaw: data.user.class, // Keep original
-            kelas: state.leaderboard.filterClass || '7', // Fallback or derived needed? 
             // Better to normalize class from user input for filtering. 
             // Let's attempt to derive 'kelas' category (7, 8, 9, SMA) from user input
             kelasKategori: deriveClassCategory(data.user.class),
@@ -1647,7 +1676,9 @@ async function saveScoreToFirestore(data) {
 
         await window.firebaseAddDoc(collectionRef, docData);
         console.log("Score saved to Firestore!", docData);
-        showToast("Skor berhasil disimpan ke Peringkat Juara!", "success");
+        
+        // Removed Toast for Leaderboard
+        // showToast("Skor berhasil disimpan ke Peringkat Juara!", "success");
     } catch (e) {
         console.error("Error adding document: ", e);
         showToast("Gagal menyimpan skor. Cek koneksi internet.", "error");
@@ -1667,176 +1698,13 @@ function deriveClassCategory(inputClass) {
 const LEADERBOARD_PAGE_SIZE = 20;
 
 async function fetchLeaderboard(isLoadMore = false) {
+    /* 
+    // Leaderboard/Peringkat dihapus sementara demi efisiensi storage
+    // Fondasi ini disisakan untuk rilis Mode Olimpiade di masa depan.
+    
     const listEl = els.leaderboardList;
-
-    if (!isLoadMore) {
-        // Reset pagination state on fresh fetch
-        state.leaderboard.lastDoc = null;
-        state.leaderboard.hasMore = false;
-
-        listEl.innerHTML = `
-            <div class="animate-pulse space-y-4">
-                <div class="h-16 bg-slate-800/50 rounded-xl"></div>
-                <div class="h-16 bg-slate-800/50 rounded-xl"></div>
-            </div>
-        `;
-    }
-
-    if (!window.firebaseDb) {
-        listEl.innerHTML = `
-            <div class="p-6 text-center text-red-400 bg-red-500/10 rounded-2xl border border-red-500/50">
-                <p class="font-bold text-lg mb-2">Konfigurasi Belum Sesuai</p>
-                <p class="text-sm">Koneksi ke sistem peringkat gagal. Pastikan konfigurasi Firebase di <code>index.html</code> sudah diisi dengan benar.</p>
-            </div>
-        `;
-        showToast("Error: Firebase DB tidak ditemukan.", "error");
-        return;
-    }
-
-    try {
-        const scoresRef = window.firebaseCollection(window.firebaseDb, 'scores');
-
-        // Construct Query
-        const constraints = [
-            window.firebaseWhere("tipeOperasi", "==", state.leaderboard.filterOp),
-            window.firebaseWhere("kelasKategori", "==", state.leaderboard.filterClass),
-            window.firebaseOrderBy("skor", "desc"),
-            window.firebaseOrderBy("waktuRataRata", "asc")
-        ];
-
-        // Pagination: startAfter last document if loading more
-        if (isLoadMore && state.leaderboard.lastDoc) {
-            constraints.push(window.firebaseStartAfter(state.leaderboard.lastDoc));
-        }
-
-        // Weekly fetches slightly more to account for client-side date filtering
-        const pageSize = state.leaderboard.filterTime === 'weekly'
-            ? LEADERBOARD_PAGE_SIZE * 3  // 60 docs, filter client-side
-            : LEADERBOARD_PAGE_SIZE;     // 20 docs
-
-        constraints.push(window.firebaseLimit(pageSize));
-
-        const q = window.firebaseQuery(scoresRef, ...constraints);
-
-        // One-time fetch (with offline cache support from IndexedDB persistence)
-        const querySnapshot = await window.firebaseGetDocs(q);
-
-        // Remove loading indicator or "Load More" button
-        if (!isLoadMore) {
-            listEl.innerHTML = '';
-        } else {
-            // Remove the existing "Load More" button
-            const loadMoreBtn = listEl.querySelector('#btn-load-more');
-            if (loadMoreBtn) loadMoreBtn.remove();
-        }
-
-        // Save last document for pagination
-        const allDocs = querySnapshot.docs;
-        if (allDocs.length > 0) {
-            state.leaderboard.lastDoc = allDocs[allDocs.length - 1];
-        }
-        state.leaderboard.hasMore = allDocs.length >= pageSize;
-
-        let docs = [];
-        querySnapshot.forEach((doc) => {
-            docs.push(doc.data());
-        });
-
-        // Client-side date filtering for Weekly
-        if (state.leaderboard.filterTime === 'weekly') {
-            const now = new Date();
-            const dayOfWeek = now.getDay();
-            const diffToMonday = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-            const startOfWeek = new Date(now.getFullYear(), now.getMonth(), diffToMonday, 0, 0, 0, 0);
-
-            docs = docs.filter(data => {
-                if (!data.tanggal) return false;
-                const docDate = new Date(data.tanggal.seconds * 1000);
-                return docDate >= startOfWeek;
-            });
-        }
-
-        // Deduplicate: keep only the best score per person
-        const seen = new Set();
-        docs = docs.filter(data => {
-            const key = (data.nama || '').toLowerCase().trim() + '|' + (data.kelasRaw || '');
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-        });
-
-        if (docs.length === 0 && !isLoadMore) {
-            listEl.innerHTML = `
-                <div class="flex flex-col items-center justify-center h-64 text-slate-500">
-                    <svg class="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <p>Belum ada data peringkat untuk kategori ini.</p>
-                </div>
-            `;
-            return;
-        }
-
-        // Calculate rank offset for pagination
-        const existingItems = listEl.querySelectorAll('.leaderboard-item');
-        let rank = existingItems.length + 1;
-
-        docs.forEach((data) => {
-            renderLeaderboardItem(data, rank++);
-        });
-
-        // Add "Load More" button if there may be more data
-        if (state.leaderboard.hasMore) {
-            const loadMoreDiv = document.createElement('div');
-            loadMoreDiv.id = 'btn-load-more';
-            loadMoreDiv.innerHTML = `
-                <button onclick="loadMoreLeaderboard()"
-                    class="w-full mt-4 py-3 bg-brand-surface/50 hover:bg-brand-surface border border-brand-border/50 rounded-xl text-brand-text-muted hover:text-brand-text transition-all text-sm font-medium">
-                    Muat Lebih Banyak
-                </button>
-            `;
-            listEl.appendChild(loadMoreDiv);
-        }
-
-    } catch (error) {
-        console.error("Error fetching leaderboard: ", error);
-
-        // FALLBACK STRATEGY FOR WEEKLY FILTER
-        if (state.leaderboard.filterTime === 'weekly' && (error.message.includes('index') || error.code === 'failed-precondition')) {
-            console.log("Weekly Index missing. Falling back to client-side filtering.");
-            fetchLeaderboardFallback();
-            return;
-        }
-
-        let errorMsg = "Gagal memuat data.";
-        let errorHint = error.message;
-        let indexAction = "";
-
-        const indexUrlMatch = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
-
-        if (error.message.includes('requires an index') || error.code === 'failed-precondition') {
-            errorMsg = "Sistem Peringkat perlu inisialisasi Database.";
-            if (indexUrlMatch) {
-                indexAction = `<a href="${indexUrlMatch[0]}" target="_blank" class="block mt-3 bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-4 rounded-lg transition-colors underline decoration-dotted">Klik di sini untuk membuat Index Otomatis</a>`;
-                errorHint = "Klik tombol di atas untuk memperbaiki database secara otomatis.";
-            } else {
-                errorHint = "Index Firestore belum dibuat. Buka Developer Console (F12) untuk melihat link pembuatan Index.";
-            }
-        } else if (error.code === 'unavailable') {
-            errorMsg = "Koneksi internet bermasalah atau offline.";
-        } else if (error.code === 'permission-denied') {
-            errorMsg = "Akses Ditolak.";
-            errorHint = "Cek Aturan Keamanan (Security Rules) di Firebase Console.";
-        }
-
-        listEl.innerHTML = `
-            <div class="p-6 text-center text-red-200 bg-red-900/50 rounded-2xl border border-red-500/50 max-w-lg mx-auto">
-                <svg class="w-12 h-12 mx-auto mb-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                <h3 class="font-bold text-xl mb-2">${errorMsg}</h3>
-                <p class="text-sm text-red-300/80 mb-4">${errorHint}</p>
-                ${indexAction}
-            </div>
-        `;
-        showToast(`Error: ${errorMsg}`, "error");
-    }
+    if (!listEl) return;
+    */
 }
 
 async function loadMoreLeaderboard() {
@@ -2230,6 +2098,12 @@ function renderRaport(mode) {
     let modeName = getModeName(mode);
     els.raportSubject.textContent = `Operasi ${modeName}`;
     els.raportDate.textContent = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+
+    if (state.appMode === 'remedial') {
+        if (els.raportMainTitle) els.raportMainTitle.textContent = "BUKTI LULUS REMEDIAL MATEMATIKA";
+    } else {
+        if (els.raportMainTitle) els.raportMainTitle.textContent = "RAPOR HASIL BELAJAR";
+    }
 
     // Generate Exam Description
     const config = GAME_CONFIG.exam;

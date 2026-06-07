@@ -321,7 +321,59 @@
             </form>
         </section>
 
-        <!-- 2. MENU SCREEN -->
+        <!-- 1.5. MODE SELECTION SCREEN (MAIN HUB) -->
+        <section id="screen-mode-selection" class="hidden w-full max-w-4xl p-4 animate-fade-in">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-text to-brand-text-muted mb-2">Pilih Mode Belajar</h2>
+                <p class="text-brand-text-muted">Pilih mode sesuai dengan tugas atau targetmu hari ini.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Mode Pemantauan -->
+                <button onclick="selectAppMode('pemantauan')" class="group relative animated-border delay-0 rounded-3xl p-6 text-left transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-brand-primary/20 bg-brand-surface/40 backdrop-blur-md border border-brand-border/50">
+                    <div class="absolute right-[-20px] bottom-[-20px] w-32 h-32 bg-brand-primary/10 rounded-full blur-2xl group-hover:bg-brand-primary/20 transition-all"></div>
+                    <div class="relative z-10 flex flex-col gap-4">
+                        <div class="p-4 bg-gradient-to-br from-brand-primary to-cyan-500 text-white rounded-2xl shadow-lg shadow-brand-primary/30 w-fit">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-brand-text mb-1">Mode Pemantauan</h3>
+                            <p class="text-brand-text-muted text-sm font-medium">Latihan bertahap untuk Mastery Learning. Selesaikan latihan untuk membuka Ujian.</p>
+                        </div>
+                    </div>
+                </button>
+
+                <!-- Mode Remedial -->
+                <button onclick="selectAppMode('remedial')" class="group relative animated-border delay-200 rounded-3xl p-6 text-left transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-orange-500/20 bg-brand-surface/40 backdrop-blur-md border border-brand-border/50">
+                    <div class="absolute right-[-20px] bottom-[-20px] w-32 h-32 bg-orange-500/10 rounded-full blur-2xl group-hover:bg-orange-500/20 transition-all"></div>
+                    <div class="relative z-10 flex flex-col gap-4">
+                        <div class="p-4 bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-2xl shadow-lg shadow-orange-500/30 w-fit">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-brand-text mb-1">Mode Remedial</h3>
+                            <p class="text-brand-text-muted text-sm font-medium">Ujian instan tanpa syarat latihan. Cetak bukti lulus untuk diserahkan ke guru.</p>
+                        </div>
+                    </div>
+                </button>
+
+                <!-- Mode Duel -->
+                <button onclick="selectAppMode('duel')" class="group relative animated-border delay-400 rounded-3xl p-6 text-left transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-purple-500/20 bg-brand-surface/40 backdrop-blur-md border border-brand-border/50">
+                    <div class="absolute right-[-20px] bottom-[-20px] w-32 h-32 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all"></div>
+                    <div class="relative z-10 flex flex-col gap-4">
+                        <div class="p-4 bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-2xl shadow-lg shadow-purple-500/30 w-fit">
+                            <span class="text-3xl leading-none">⚔️</span>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-brand-text mb-1">Mode Duel</h3>
+                            <p class="text-brand-text-muted text-sm font-medium">Lawan temanmu secara real-time dan buktikan siapa yang tercepat!</p>
+                        </div>
+                    </div>
+                </button>
+            </div>
+        </section>
+
+        <!-- 2. MENU SCREEN (Dashboard) -->
         <section id="screen-menu" class="hidden w-full max-w-4xl p-4">
             <!-- Warning Banner Default PIN -->
             <div id="banner-change-pin" class="hidden mb-6 bg-orange-500/10 border border-orange-500/50 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in">
@@ -339,12 +391,15 @@
                 </button>
             </div>
 
-            <h2
-                class="text-3xl md:text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-brand-text to-brand-text-muted">
-                Pilih Tantanganmu
-            </h2>
-
-            </h2>
+            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                <h2 class="text-3xl md:text-4xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-brand-text to-brand-text-muted" id="menu-title-mode">
+                    Pilih Kategori Ujian
+                </h2>
+                <button onclick="showModeSelection()" class="bg-brand-surface hover:bg-brand-surface/80 border border-brand-border text-brand-text-muted hover:text-brand-text px-4 py-2 rounded-xl transition-all text-sm font-bold flex items-center gap-2 shadow-lg">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"></path></svg>
+                    Ganti Mode Utama
+                </button>
+            </div>
 
             <!-- Recommendation Hint (New) -->
             <div id="recommendation-hint"
@@ -400,35 +455,6 @@
                     </div>
                 </button>
             </div>
-
-            <!-- Mode Duel Button (New) -->
-            <button onclick="showDuelLobby()"
-                class="w-full mt-6 flex items-center justify-center gap-4 animated-border delay-300 rounded-2xl p-5 transition-all group shadow-lg border border-brand-border/50 bg-gradient-to-br from-orange-500/10 to-red-500/5 hover:from-orange-500/20 hover:to-red-500/10">
-                <div class="relative z-10 p-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl group-hover:scale-110 transition-transform shadow-lg shadow-red-500/30">
-                    <span class="text-2xl leading-none">⚔️</span>
-                </div>
-                <div class="relative z-10 text-left">
-                    <div class="font-bold text-brand-text text-lg">Mode Duel</div>
-                    <div class="text-sm text-brand-text-muted font-medium">Lawan temanmu secara real-time!</div>
-                </div>
-            </button>
-
-            <!-- Leaderboard Button -->
-            <button onclick="showLeaderboardScreen()"
-                class="w-full mt-6 flex items-center justify-center gap-4 animated-border delay-400 rounded-2xl p-5 transition-all group shadow-lg">
-                <div
-                    class="relative z-10 p-2 bg-yellow-500 text-brand-dark rounded-xl group-hover:scale-110 transition-transform shadow-lg shadow-yellow-500/30">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
-                        </path>
-                    </svg>
-                </div>
-                <div class="relative z-10 text-left">
-                    <div class="font-bold text-brand-text text-lg">Peringkat Juara</div>
-                    <div class="text-sm text-brand-text-muted font-medium">Lihat siapa yang tercepat di kelasmu!</div>
-                </div>
-            </button>
         </section>
 
         <!-- 3. GAME SCREEN -->
@@ -877,7 +903,7 @@
                 <div class="p-8 md:p-12">
                     <div class="flex justify-between items-start mb-8 border-b-2 border-brand-border pb-6">
                         <div>
-                            <h1 class="text-3xl font-serif font-bold text-brand-text tracking-tight mb-2">RAPOR HASIL
+                            <h1 id="raport-main-title" class="text-3xl font-serif font-bold text-brand-text tracking-tight mb-2">RAPOR HASIL
                                 BELAJAR</h1>
                             <p class="text-brand-text-muted text-sm uppercase tracking-widest font-semibold">Jago Angka
                             </p>
@@ -986,7 +1012,7 @@
                             d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
                         </path>
                     </svg>
-                    <span class="text-sm font-bold hidden md:inline">Download PDF</span>
+                    <span class="text-sm font-bold" id="raport-btn-text">Cetak / Simpan PDF</span>
                 </button>
                 <button onclick="closeRaport()"
                     class="bg-brand-surface text-brand-text rounded-full p-3 hover:bg-brand-surface/80 transition-all">
@@ -998,127 +1024,7 @@
             </div>
         </div>
 
-        <!-- 7. LEADERBOARD SCREEN -->
-        <section id="screen-leaderboard"
-            class="hidden w-full max-w-4xl h-[90vh] flex flex-col glass-effect border border-brand-border/50 rounded-3xl shadow-2xl overflow-hidden">
-
-            <!-- Header -->
-            <div class="p-6 border-b border-brand-border/50 flex justify-between items-center bg-slate-900/50">
-                <div class="flex items-center gap-4">
-                    <div class="p-3 bg-yellow-500/20 text-yellow-500 rounded-xl shadow-lg shadow-yellow-500/10">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
-                            </path>
-                        </svg>
-                    </div>
-                    <div>
-                        <h2 class="text-2xl font-bold text-brand-text">Peringkat Juara</h2>
-                        <p class="text-brand-text-muted text-sm">Siapa Jagoan Matematika?</p>
-                    </div>
-                </div>
-                <button onclick="showMenu()"
-                    class="bg-brand-surface hover:bg-brand-surface text-slate-300 hover:text-brand-text px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                    </svg>
-                    <span>Kembali</span>
-                </button>
-            </div>
-
-            <!-- Filters -->
-            <div class="p-4 md:p-6 bg-brand-surface/30 border-b border-brand-border/50">
-                <!-- Time Filter (New) -->
-                <div class="flex bg-slate-900/50 p-1 rounded-xl border border-brand-border/50 mb-4">
-                    <button onclick="filterLeaderboardTime('weekly')" id="btn-filter-time-weekly"
-                        class="flex-1 py-2 text-sm font-medium rounded-lg text-brand-text bg-slate-700 shadow-lg shadow-black/20 transition-all">
-                        Minggu Ini
-                    </button>
-                    <button onclick="filterLeaderboardTime('all')" id="btn-filter-time-all"
-                        class="flex-1 py-2 text-sm font-medium rounded-lg text-brand-text-muted hover:text-brand-text transition-all">
-                        Semua Waktu
-                    </button>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Class Filter -->
-                    <div>
-                        <label
-                            class="block text-xs font-semibold text-brand-text-muted uppercase tracking-wider mb-2 ml-1">Kategori
-                            Kelas</label>
-                        <div class="flex bg-slate-900/50 p-1 rounded-xl border border-brand-border/50">
-                            <button onclick="filterLeaderboardClass('7')" id="btn-filter-class-7"
-                                class="flex-1 py-2 text-sm font-medium rounded-lg text-brand-text-muted hover:text-brand-text transition-all">7</button>
-                            <button onclick="filterLeaderboardClass('8')" id="btn-filter-class-8"
-                                class="flex-1 py-2 text-sm font-medium rounded-lg text-brand-text-muted hover:text-brand-text transition-all">8</button>
-                            <button onclick="filterLeaderboardClass('9')" id="btn-filter-class-9"
-                                class="flex-1 py-2 text-sm font-medium rounded-lg text-brand-text-muted hover:text-brand-text transition-all">9</button>
-                            <button onclick="filterLeaderboardClass('SMA')" id="btn-filter-class-SMA"
-                                class="flex-1 py-2 text-sm font-medium rounded-lg text-brand-text-muted hover:text-brand-text transition-all">SMA</button>
-                        </div>
-                    </div>
-
-                    <!-- Operation Filter -->
-                    <div>
-                        <label
-                            class="block text-xs font-semibold text-brand-text-muted uppercase tracking-wider mb-2 ml-1">Kategori
-                            Soal</label>
-                        <div class="relative">
-                            <select id="select-leaderboard-op" onchange="filterLeaderboardOp(this.value)"
-                                class="w-full bg-slate-900/50 border border-brand-border text-brand-text text-sm rounded-xl focus:ring-brand-primary focus:border-brand-primary block p-2.5 appearance-none">
-                                <option value="multiply">Perkalian</option>
-                                <option value="divide">Pembagian</option>
-                                <option value="add">Penjumlahan</option>
-                                <option value="subtract">Pengurangan</option>
-                                <option disabled>──── Desimal ────</option>
-                                <option value="decimal_add">Desimal: Penjumlahan</option>
-                                <option value="decimal_subtract">Desimal: Pengurangan</option>
-                                <option value="decimal_multiply">Desimal: Perkalian</option>
-                                <option value="decimal_divide">Desimal: Pembagian</option>
-                            </select>
-                            <div
-                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-brand-text">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- List -->
-            <div class="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6" id="leaderboard-list">
-                <!-- Debug Button (Temporary) -->
-                <div class="mb-4 text-center">
-                    <button onclick="fetchLeaderboardDebug()"
-                        class="text-xs text-slate-500 hover:text-brand-text underline">
-                        [DEBUG] Lihat Semua Data (Tanpa Filter)
-                    </button>
-                </div>
-                <!-- Items will be injected here -->
-                <div class="animate-pulse space-y-4">
-                    <div class="h-16 bg-brand-surface/50 rounded-xl"></div>
-                    <div class="h-16 bg-brand-surface/50 rounded-xl"></div>
-                    <div class="h-16 bg-brand-surface/50 rounded-xl"></div>
-                </div>
-            </div>
-
-            <!-- User Rank Footer (Optional, sticky at bottom) -->
-            <div class="p-4 bg-slate-900 border-t border-brand-border hidden" id="current-user-rank-container">
-                <div class="flex items-center justify-between text-brand-text">
-                    <div class="flex items-center gap-3">
-                        <span class="font-bold text-brand-text-muted">#<span id="user-rank-pos">-</span></span>
-                        <span class="font-bold">Kamu</span>
-                    </div>
-                    <div class="text-right">
-                        <div class="font-bold text-brand-accent" id="user-rank-score">-</div>
-                    </div>
-                </div>
-            </div>
-        </section>
+        <!-- Leaderboard removed -->
 
         <!-- 8. DUEL LOBBY SCREEN -->
         <section id="screen-duel-lobby" class="hidden w-full max-w-md glass-effect border border-brand-border/50 p-8 rounded-3xl shadow-2xl transform transition-all text-center relative z-20">
@@ -1135,7 +1041,7 @@
                     Gabung Room
                 </button>
             </div>
-            <button onclick="showMenu()" class="mt-8 text-sm text-brand-text-muted hover:text-brand-text transition-colors">
+            <button onclick="showModeSelection()" class="mt-8 text-sm text-brand-text-muted hover:text-brand-text transition-colors">
                 &larr; Kembali ke Menu
             </button>
         </section>
