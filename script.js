@@ -1269,11 +1269,15 @@ function trackWeakness(questionText, answer, mode, isCorrect) {
     
     const category = getQuestionCategory(mode, questionText);
 
-    if (!state.weaknesses[category] || typeof state.weaknesses[category].total_salah === 'undefined') {
-        state.weaknesses[category] = {
-            total_salah: 0,
-            contoh_kasus: []
-        };
+    if (!state.weaknesses[category]) {
+        state.weaknesses[category] = { total_salah: 0, contoh_kasus: [] };
+    } else {
+        if (typeof state.weaknesses[category].total_salah === 'undefined') {
+            state.weaknesses[category].total_salah = 0;
+        }
+        if (!Array.isArray(state.weaknesses[category].contoh_kasus)) {
+            state.weaknesses[category].contoh_kasus = [];
+        }
     }
 
     if (!isCorrect) {
