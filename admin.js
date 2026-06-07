@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 import { getDatabase, ref, get, set } from "firebase/database";
 
 const firebaseConfig = {
@@ -25,6 +25,7 @@ const els = {
     loginError: document.getElementById('login-error'),
     btnLogout: document.getElementById('btn-logout'),
     btnSave: document.getElementById('btn-save'),
+    btnRegister: document.getElementById('btn-register'),
     configForms: document.getElementById('config-forms')
 };
 
@@ -139,6 +140,33 @@ els.formLogin.addEventListener('submit', async (e) => {
     } finally {
         btn.textContent = originalText;
         btn.disabled = false;
+    }
+});
+
+els.btnRegister.addEventListener('click', async () => {
+    els.loginError.classList.add('hidden');
+    
+    if(!els.inputEmail.value || !els.inputPassword.value) {
+        els.loginError.textContent = "Isi Email dan Password terlebih dahulu!";
+        els.loginError.classList.remove('hidden');
+        return;
+    }
+
+    const originalText = els.btnRegister.textContent;
+    els.btnRegister.textContent = "Mendaftar...";
+    els.btnRegister.disabled = true;
+    
+    try {
+        await createUserWithEmailAndPassword(auth, els.inputEmail.value, els.inputPassword.value);
+        console.log("Register sukses!");
+        // We rely on onAuthStateChanged to switch screens.
+    } catch (error) {
+        console.error("Firebase Register Error:", error);
+        els.loginError.textContent = `Daftar gagal: ${error.message}`;
+        els.loginError.classList.remove('hidden');
+    } finally {
+        els.btnRegister.textContent = originalText;
+        els.btnRegister.disabled = false;
     }
 });
 

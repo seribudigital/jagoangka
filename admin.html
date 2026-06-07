@@ -80,9 +80,14 @@
                     <label class="block text-sm font-medium text-slate-300 ml-1">Password</label>
                     <input type="password" id="input-password" required placeholder="••••••••" class="input-admin">
                 </div>
-                <button type="submit" class="w-full bg-brand-primary hover:bg-brand-primary/90 text-brand-text font-bold py-3 rounded-xl transition-all shadow-lg shadow-brand-primary/25 mt-6">
-                    Login
-                </button>
+                <div class="flex gap-2 mt-6">
+                    <button type="submit" class="w-1/2 bg-brand-primary hover:bg-brand-primary/90 text-brand-text font-bold py-3 rounded-xl transition-all shadow-lg shadow-brand-primary/25">
+                        Login
+                    </button>
+                    <button type="button" id="btn-register" class="w-1/2 bg-brand-surface hover:bg-brand-surface/90 text-brand-text font-bold py-3 rounded-xl transition-all border border-brand-border">
+                        Daftar Baru
+                    </button>
+                </div>
             </form>
             <p id="login-error" class="text-red-400 text-sm text-center mt-4 hidden"></p>
         </section>
