@@ -2697,7 +2697,7 @@ window.submitChangePin = async function() {
     } catch(e) {
         console.error("Gagal ganti PIN", e);
         els.errorChangePin.className = "text-red-400 text-sm text-center";
-        els.errorChangePin.textContent = "Gagal menghubungi server. Coba lagi.";
+        els.errorChangePin.textContent = "Gagal: " + (e.message || "Terjadi kesalahan");
     }
 }
 
