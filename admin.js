@@ -471,7 +471,7 @@ els.selectAdminClass.addEventListener('change', () => {
             const nm = e.target.getAttribute('data-name');
             if (confirm(`Yakin mereset PIN ${nm} di kelas ${cls} menjadi 1234?`)) {
                 try {
-                    await set(ref(db, \`appConfig/students/\${cls}/\${nm}\`), "1234");
+                    await set(ref(db, `appConfig/students/${cls}/${nm}`), "1234");
                     // Refresh data
                     loadAdminStudents().then(() => {
                         els.selectAdminClass.value = cls;
@@ -484,5 +484,4 @@ els.selectAdminClass.addEventListener('change', () => {
             }
         });
     });
-}
-);
+});

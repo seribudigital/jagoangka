@@ -8,7 +8,7 @@
     <!-- Google Fonts: Outfit -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
     <!-- Tailwind Static CSS -->
-    <link rel="stylesheet" href="main.css?v=5">
+    <link rel="stylesheet" href="main.css?v=2.0">
     <style>
         :root {
             --glass-bg: rgba(30, 41, 59, 0.75);
@@ -47,15 +47,10 @@
     <!-- SheetJS for Excel Parsing -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 
-    <script type="importmap">
-      {
-        "imports": {
-          "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
-          "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
-          "firebase/database": "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js"
-        }
-      }
-    </script>
+    <!-- Firebase Compat SDKs (NO ES modules needed) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
     <!-- Header -->
     <header class="w-full p-6 flex justify-between items-center bg-brand-surface/50 border-b border-brand-border/50 backdrop-blur-md sticky top-0 z-50">
@@ -179,6 +174,468 @@
         </section>
     </main>
 
-    <script type="module" src="admin.js?v=11"></script>
+    <script>
+    // ===== FIREBASE INIT (Compat SDK - no modules needed) =====
+    const firebaseConfig = {
+        apiKey: atob("QUl6YVN5RGJBeXNtUVJrSUFUWE1JVnNJYWY4ZWktcUo0cWM5QzBr"),
+        authDomain: "jagoangka-7f05a.firebaseapp.com",
+        databaseURL: "https://jagoangka-7f05a-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "jagoangka-7f05a",
+        storageBucket: "jagoangka-7f05a.firebasestorage.app",
+        messagingSenderId: "219151682477",
+        appId: "1:219151682477:web:cc560ae348f5e6228c2f24"
+    };
+
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    // ===== DOM ELEMENTS =====
+    const els = {
+        screenLogin: document.getElementById('screen-login'),
+        screenDashboard: document.getElementById('screen-dashboard'),
+        formLogin: document.getElementById('form-login'),
+        inputEmail: document.getElementById('input-email'),
+        inputPassword: document.getElementById('input-password'),
+        loginError: document.getElementById('login-error'),
+        btnLogout: document.getElementById('btn-logout'),
+        btnSave: document.getElementById('btn-save'),
+        btnRegister: document.getElementById('btn-register'),
+        configForms: document.getElementById('config-forms'),
+        inputImportStudents: document.getElementById('input-import-students'),
+        btnImportStudents: document.getElementById('btn-import-students'),
+        checkResetStudents: document.getElementById('check-reset-students'),
+        importStatus: document.getElementById('import-status'),
+        selectAdminClass: document.getElementById('select-admin-class'),
+        tableAdminStudents: document.getElementById('table-admin-students')
+    };
+
+    let adminStudentData = {};
+
+    const configSchema = {
+        "multiply": [
+            { key: "minA", label: "Min Faktor A" },
+            { key: "maxA", label: "Max Faktor A" },
+            { key: "minB", label: "Min Faktor B" },
+            { key: "maxB", label: "Max Faktor B" },
+            { key: "examTimer", label: "Timer Ujian (Detik)" }
+        ],
+        "divide": [
+            { key: "minDivisor", label: "Min Pembagi" },
+            { key: "maxDivisor", label: "Max Pembagi" },
+            { key: "minAns", label: "Min Hasil (Ans)" },
+            { key: "maxAns", label: "Max Hasil (Ans)" },
+            { key: "examTimer", label: "Timer Ujian (Detik)" }
+        ],
+        "add": [
+            { key: "min", label: "Min Angka" },
+            { key: "max", label: "Max Angka" },
+            { key: "examTimer", label: "Timer Ujian (Detik)" }
+        ],
+        "subtract": [
+            { key: "min", label: "Min Angka" },
+            { key: "max", label: "Max Angka" },
+            { key: "examTimer", label: "Timer Ujian (Detik)" }
+        ],
+        "decimal_add": [
+            { key: "minBase", label: "Min Base Integer" },
+            { key: "maxBase", label: "Max Base Integer" },
+            { key: "shiftA", label: "Shift Angka A (contoh: -1)" },
+            { key: "shiftB", label: "Shift Angka B" },
+            { key: "examTimer", label: "Timer Ujian (Detik)" }
+        ],
+        "decimal_subtract": [
+            { key: "minBase", label: "Min Base Integer" },
+            { key: "maxBase", label: "Max Base Integer" },
+            { key: "shiftA", label: "Shift Angka A" },
+            { key: "shiftB", label: "Shift Angka B" },
+            { key: "examTimer", label: "Timer Ujian (Detik)" }
+        ],
+        "decimal_multiply": [
+            { key: "minBase", label: "Min Base Integer" },
+            { key: "maxBase", label: "Max Base Integer" },
+            { key: "shiftA", label: "Shift Angka A" },
+            { key: "shiftB", label: "Shift Angka B" },
+            { key: "examTimer", label: "Timer Ujian (Detik)" }
+        ],
+        "decimal_divide": [
+            { key: "minBaseAns", label: "Min Base Hasil Int" },
+            { key: "maxBaseAns", label: "Max Base Hasil Int" },
+            { key: "minBaseDivisor", label: "Min Base Pembagi Int" },
+            { key: "maxBaseDivisor", label: "Max Base Pembagi Int" },
+            { key: "shiftAns", label: "Shift Hasil (0=Bulat, -1=Pecahan)" },
+            { key: "shiftDivisor", label: "Shift Pembagi (-1=Pecahan)" },
+            { key: "examTimer", label: "Timer Ujian (Detik)" }
+        ],
+        "global_settings": [
+            { key: "minExamScore", label: "Target Nilai Ujian (Batas Aman)" },
+            { key: "minPracticeScore", label: "Nilai Latihan Diakui (Min)" },
+            { key: "monitoringPracticeCount", label: "Syarat Jumlah Latihan Pemantauan" },
+            { key: "practiceQuestionsCount", label: "Jumlah Soal Latihan per Sesi" }
+        ]
+    };
+
+    const defaultFallback = {
+        multiply: { minA: 1, maxA: 10, minB: 1, maxB: 10, examTimer: 7 },
+        divide: { minDivisor: 1, maxDivisor: 10, minAns: 1, maxAns: 10, examTimer: 7 },
+        add: { min: -10, max: 10, examTimer: 7 },
+        subtract: { min: -10, max: 10, examTimer: 7 },
+        decimal_add: { minBase: 1, maxBase: 99, shiftA: -1, shiftB: -1, examTimer: 10 },
+        decimal_subtract: { minBase: 1, maxBase: 99, shiftA: -1, shiftB: -1, examTimer: 10 },
+        decimal_multiply: { minBase: 1, maxBase: 9, shiftA: -1, shiftB: -1, examTimer: 10 },
+        decimal_divide: { minBaseAns: 1, maxBaseAns: 10, minBaseDivisor: 1, maxBaseDivisor: 10, shiftAns: 0, shiftDivisor: -1, examTimer: 10 },
+        global_settings: { minExamScore: 90, minPracticeScore: 70, monitoringPracticeCount: 10, practiceQuestionsCount: 10 }
+    };
+
+    let currentConfigData = {};
+
+    // ===== AUTH STATE =====
+    auth.onAuthStateChanged(function(user) {
+        if (user) {
+            els.screenLogin.classList.add('hidden');
+            els.screenDashboard.classList.remove('hidden');
+            els.btnLogout.classList.remove('hidden');
+            loadConfigData();
+            loadAdminStudents();
+        } else {
+            els.screenLogin.classList.remove('hidden');
+            els.screenDashboard.classList.add('hidden');
+            els.btnLogout.classList.add('hidden');
+        }
+    });
+
+    // ===== LOGIN =====
+    els.formLogin.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        els.loginError.classList.add('hidden');
+        var btn = els.formLogin.querySelector('button[type="submit"]');
+        var originalText = btn.textContent;
+        btn.textContent = "Sedang Login...";
+        btn.disabled = true;
+        
+        try {
+            console.log("Mencoba login untuk:", els.inputEmail.value);
+            await auth.signInWithEmailAndPassword(els.inputEmail.value, els.inputPassword.value);
+            console.log("Login sukses!");
+        } catch (error) {
+            console.error("Firebase Login Error:", error);
+            els.loginError.textContent = "Login gagal: " + error.message;
+            els.loginError.classList.remove('hidden');
+            alert("Gagal login! Error: " + error.message);
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    });
+
+    // ===== REGISTER =====
+    els.btnRegister.addEventListener('click', async function() {
+        els.loginError.classList.add('hidden');
+        
+        if(!els.inputEmail.value || !els.inputPassword.value) {
+            els.loginError.textContent = "Isi Email dan Password terlebih dahulu!";
+            els.loginError.classList.remove('hidden');
+            return;
+        }
+
+        var originalText = els.btnRegister.textContent;
+        els.btnRegister.textContent = "Mendaftar...";
+        els.btnRegister.disabled = true;
+        
+        try {
+            await auth.createUserWithEmailAndPassword(els.inputEmail.value, els.inputPassword.value);
+            console.log("Register sukses!");
+        } catch (error) {
+            console.error("Firebase Register Error:", error);
+            els.loginError.textContent = "Daftar gagal: " + error.message;
+            els.loginError.classList.remove('hidden');
+        } finally {
+            els.btnRegister.textContent = originalText;
+            els.btnRegister.disabled = false;
+        }
+    });
+
+    // ===== LOGOUT =====
+    els.btnLogout.addEventListener('click', function() {
+        auth.signOut();
+    });
+
+    // ===== LOAD CONFIG =====
+    async function loadConfigData() {
+        els.configForms.innerHTML = '<p class="text-brand-text-muted">Loading data dari server...</p>';
+        try {
+            var snapshot = await db.ref('appConfig/difficulty').once('value');
+            var data = snapshot.exists() ? snapshot.val() : {};
+            
+            for(var mode in defaultFallback) {
+                if(!data[mode]) data[mode] = Object.assign({}, defaultFallback[mode]);
+            }
+            currentConfigData = data;
+            renderFields();
+        } catch (e) {
+            els.configForms.innerHTML = '<p class="text-red-400">Gagal load data. Pastikan Rule Database Anda memberi akses ke Auth.</p>';
+        }
+    }
+
+    function renderFields() {
+        els.configForms.innerHTML = '';
+        
+        for (var entry of Object.entries(configSchema)) {
+            var mode = entry[0];
+            var fields = entry[1];
+            var modeTitleDesc = mode.replace('_', ' ').toUpperCase();
+            var sectionHtml = '<div class="mb-6 border border-brand-border/30 rounded-2xl p-4 bg-brand-surface/20">' +
+                '<h3 class="text-xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-brand-accent to-brand-primary">Mode: ' + modeTitleDesc + '</h3>' +
+                '<div class="grid grid-cols-2 md:grid-cols-4 gap-4">';
+            
+            fields.forEach(function(field) {
+                var val = (currentConfigData[mode] && currentConfigData[mode][field.key] !== undefined) ? currentConfigData[mode][field.key] : defaultFallback[mode][field.key];
+                sectionHtml += '<div>' +
+                    '<label class="block text-xs font-semibold text-slate-400 mb-1">' + field.label + '</label>' +
+                    '<input type="number" data-mode="' + mode + '" data-key="' + field.key + '" value="' + val + '" class="input-admin cfg-input">' +
+                    '</div>';
+            });
+            
+            sectionHtml += '</div></div>';
+            els.configForms.innerHTML += sectionHtml;
+        }
+    }
+
+    // ===== SAVE CONFIG =====
+    els.btnSave.addEventListener('click', async function() {
+        var inputs = document.querySelectorAll('.cfg-input');
+        var newData = {};
+        
+        inputs.forEach(function(input) {
+            var mode = input.getAttribute('data-mode');
+            var key = input.getAttribute('data-key');
+            var val = parseFloat(input.value);
+            if(!newData[mode]) newData[mode] = {};
+            newData[mode][key] = isNaN(val) ? 0 : val;
+        });
+
+        els.btnSave.textContent = "Menyimpan...";
+        try {
+            await db.ref('appConfig/difficulty').set(newData);
+            els.btnSave.textContent = "✅ Tersimpan!";
+            setTimeout(function() { els.btnSave.textContent = "Simpan Config"; }, 2000);
+        } catch (e) {
+            alert("Gagal menyimpan. Pastikan Rule Database Firebase benar.");
+            els.btnSave.textContent = "Simpan Config";
+        }
+    });
+
+    // ===== IMPORT STUDENTS =====
+    function showImportStatus(msg, isError) {
+        els.importStatus.textContent = msg;
+        els.importStatus.className = 'text-sm font-medium mt-4 ' + (isError ? 'text-red-400' : 'text-brand-accent');
+        els.importStatus.classList.remove('hidden');
+    }
+
+    els.btnImportStudents.addEventListener('click', async function() {
+        var file = els.inputImportStudents.files[0];
+        if (!file) {
+            showImportStatus("Silakan pilih file terlebih dahulu!", true);
+            return;
+        }
+
+        var resetOld = els.checkResetStudents.checked;
+        els.btnImportStudents.textContent = "Memproses...";
+        els.btnImportStudents.disabled = true;
+        showImportStatus("Membaca file...");
+
+        try {
+            var reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    var parsedData = {};
+                    
+                    if (file.name.endsWith('.json')) {
+                        parsedData = JSON.parse(e.target.result);
+                    } else {
+                        var data = new Uint8Array(e.target.result);
+                        var workbook = XLSX.read(data, {type: 'array'});
+                        var firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        var rows = XLSX.utils.sheet_to_json(firstSheet, {defval: ""});
+                        
+                        rows.forEach(function(row) {
+                            var kKelas = Object.keys(row).find(function(k) { return k.toLowerCase() === 'kelas'; });
+                            var kNama = Object.keys(row).find(function(k) { return k.toLowerCase() === 'nama'; });
+                            var kPin = Object.keys(row).find(function(k) { return k.toLowerCase() === 'pin'; });
+                            
+                            if (kKelas && kNama && row[kKelas] && row[kNama]) {
+                                var kelasVal = String(row[kKelas]).replace(/\s+/g, '').toUpperCase();
+                                var namaVal = String(row[kNama]).trim();
+                                var pinVal = (kPin && row[kPin]) ? String(row[kPin]).trim() : "1234";
+                                
+                                if (kelasVal && namaVal) {
+                                    if (!parsedData[kelasVal]) parsedData[kelasVal] = {};
+                                    parsedData[kelasVal][namaVal] = pinVal;
+                                }
+                            }
+                        });
+                    }
+
+                    if (Object.keys(parsedData).length === 0) {
+                        showImportStatus("Format tidak sesuai atau data kosong. Pastikan ada kolom 'Kelas' dan 'Nama'.", true);
+                        return;
+                    }
+
+                    var finalData = parsedData;
+                    if (!resetOld) {
+                        var existingSnap = await db.ref('appConfig/students').once('value');
+                        if (existingSnap.exists()) {
+                            var existingData = existingSnap.val();
+                            finalData = {};
+                            
+                            for (var kelas in existingData) {
+                                finalData[kelas] = {};
+                                var classData = existingData[kelas];
+                                if (Array.isArray(classData)) {
+                                    classData.forEach(function(name) {
+                                        if (name && typeof name === 'string') finalData[kelas][name] = "1234";
+                                    });
+                                } else if (typeof classData === 'object') {
+                                    for (var key in classData) {
+                                        if (!isNaN(key)) {
+                                            var name = classData[key];
+                                            if (name && typeof name === 'string') finalData[kelas][name] = "1234";
+                                        } else {
+                                            finalData[kelas][key] = classData[key];
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            for (var kelas2 in parsedData) {
+                                if (!finalData[kelas2]) finalData[kelas2] = {};
+                                for (var nama in parsedData[kelas2]) {
+                                    finalData[kelas2][nama] = parsedData[kelas2][nama];
+                                }
+                            }
+                        }
+                    }
+
+                    var sortedFinal = {};
+                    Object.keys(finalData).sort().forEach(function(c) {
+                        sortedFinal[c] = {};
+                        Object.keys(finalData[c]).sort().forEach(function(n) {
+                            sortedFinal[c][n] = finalData[c][n];
+                        });
+                    });
+
+                    showImportStatus("Menyimpan ke database...");
+                    await db.ref('appConfig/students').set(sortedFinal);
+                    
+                    showImportStatus("✅ Import berhasil! Disimpan " + Object.keys(sortedFinal).length + " kelas.");
+                    els.inputImportStudents.value = "";
+                    loadAdminStudents();
+                } catch (err) {
+                    console.error("Parse Error:", err);
+                    showImportStatus("Gagal memproses file: " + err.message, true);
+                } finally {
+                    els.btnImportStudents.textContent = "Proses Import";
+                    els.btnImportStudents.disabled = false;
+                }
+            };
+
+            if (file.name.endsWith('.json')) {
+                reader.readAsText(file);
+            } else {
+                reader.readAsArrayBuffer(file);
+            }
+        } catch (e) {
+            showImportStatus("Terjadi kesalahan sistem.", true);
+            els.btnImportStudents.textContent = "Proses Import";
+            els.btnImportStudents.disabled = false;
+        }
+    });
+
+    // ===== ADMIN STUDENT MANAGEMENT (PIN RESET) =====
+    async function loadAdminStudents() {
+        var snap = await db.ref('appConfig/students').once('value');
+        if (snap.exists()) {
+            var rawData = snap.val();
+            adminStudentData = {};
+            
+            for (var kelas in rawData) {
+                adminStudentData[kelas] = {};
+                var classData = rawData[kelas];
+                
+                if (Array.isArray(classData)) {
+                    classData.forEach(function(name) {
+                        if (name && typeof name === 'string') adminStudentData[kelas][name] = "1234";
+                    });
+                } else if (typeof classData === 'object') {
+                    for (var key in classData) {
+                        if (!isNaN(key)) {
+                            var name = classData[key];
+                            if (name && typeof name === 'string') adminStudentData[kelas][name] = "1234";
+                        } else {
+                            adminStudentData[kelas][key] = classData[key];
+                        }
+                    }
+                }
+            }
+        } else {
+            adminStudentData = {};
+        }
+        
+        els.selectAdminClass.innerHTML = '<option value="" disabled selected>Pilih Kelas</option>';
+        Object.keys(adminStudentData).sort().forEach(function(c) {
+            var opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            els.selectAdminClass.appendChild(opt);
+        });
+        
+        els.tableAdminStudents.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center text-brand-text-muted">Pilih kelas untuk melihat data.</td></tr>';
+    }
+
+    els.selectAdminClass.addEventListener('change', function() {
+        var selectedClass = els.selectAdminClass.value;
+        if (!selectedClass || !adminStudentData[selectedClass]) return;
+        
+        var studentsObj = adminStudentData[selectedClass];
+        var sortedNames = Object.keys(studentsObj).sort();
+        
+        if (sortedNames.length === 0) {
+            els.tableAdminStudents.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center text-brand-text-muted">Kelas kosong.</td></tr>';
+            return;
+        }
+        
+        els.tableAdminStudents.innerHTML = '';
+        sortedNames.forEach(function(name) {
+            var currentPin = studentsObj[name];
+            var isDefault = currentPin === "1234";
+            
+            var tr = document.createElement('tr');
+            tr.className = "hover:bg-brand-surface/50 transition-colors";
+            tr.innerHTML = '<td class="px-6 py-4 font-medium">' + name + '</td>' +
+                '<td class="px-6 py-4"><span class="px-2 py-1 rounded text-xs font-bold ' + (isDefault ? 'bg-orange-500/20 text-orange-400' : 'bg-green-500/20 text-green-400') + '">' + currentPin + '</span></td>' +
+                '<td class="px-6 py-4 text-right"><button class="btn-reset-pin text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition-colors text-white" data-class="' + selectedClass + '" data-name="' + name + '">Reset (1234)</button></td>';
+            els.tableAdminStudents.appendChild(tr);
+        });
+        
+        document.querySelectorAll('.btn-reset-pin').forEach(function(btn) {
+            btn.addEventListener('click', async function(e) {
+                var cls = e.target.getAttribute('data-class');
+                var nm = e.target.getAttribute('data-name');
+                if (confirm("Yakin mereset PIN " + nm + " di kelas " + cls + " menjadi 1234?")) {
+                    try {
+                        await db.ref('appConfig/students/' + cls + '/' + nm).set("1234");
+                        loadAdminStudents().then(function() {
+                            els.selectAdminClass.value = cls;
+                            els.selectAdminClass.dispatchEvent(new Event('change'));
+                        });
+                        alert("PIN berhasil direset ke 1234.");
+                    } catch(err) {
+                        alert("Gagal mereset PIN: " + err.message);
+                    }
+                }
+            });
+        });
+    });
+    </script>
 </body>
 </html>

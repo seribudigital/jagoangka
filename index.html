@@ -36,9 +36,9 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Tailwind Static CSS -->
-    <link rel="stylesheet" href="main.css?v=5">
+    <link rel="stylesheet" href="main.css?v=2.0">
     <link rel="icon" href="assets/fav.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="duel.css?v=1">
+    <link rel="stylesheet" href="duel.css?v=2.0">
     <style>
         :root {
             /* Default: Dark-mode glassmorphism values */
@@ -71,7 +71,7 @@
     class="bg-brand-dark text-brand-text font-sans min-h-screen overflow-x-hidden selection:bg-brand-accent selection:text-brand-dark transition-colors duration-300">
 
     <!-- Shared Import Map -->
-    <script type="importmap">
+    <script type="importmap" data-cfasync="false">
       {
         "imports": {
           "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
@@ -1219,7 +1219,7 @@
     </div>
 
     <!-- Firebase SDKs (Import map moved to head section) -->
-    <script type="module">
+    <script type="module" data-cfasync="false">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "firebase/app";
         import { getAnalytics } from "firebase/analytics";
@@ -1301,9 +1301,9 @@
 
         console.log("Firebase initialized with Firestore + Offline Persistence");
     </script>
-    <script type="module" src="background3d.js"></script>
-    <script src="script.js?v=12" defer></script>
-    <script src="duel.js?v=1" defer></script>
+    <script type="module" src="background3d.js?v=2.0" data-cfasync="false"></script>
+    <script src="script.js?v=2.0" defer></script>
+    <script src="duel.js?v=2.0" defer></script>
 </body>
 
 </html>
