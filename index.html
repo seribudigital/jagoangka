@@ -253,17 +253,48 @@
             </div>
 
             <form id="form-welcome" class="space-y-4">
-                <div>
-                    <label for="input-name" class="block text-sm font-medium text-slate-300 mb-1 ml-1">Nama
-                        Lengkap</label>
-                    <input type="text" id="input-name" required placeholder="Contoh: Budi Santoso"
-                        class="w-full bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text placeholder-slate-500 outline-none transition-all">
+                <!-- Dropdown Mode (Default) -->
+                <div id="login-dropdown-mode">
+                    <div class="mb-4">
+                        <label for="select-class" class="block text-sm font-medium text-slate-300 mb-1 ml-1">Kelas</label>
+                        <select id="select-class" required
+                            class="w-full bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text outline-none transition-all appearance-none cursor-pointer">
+                            <option value="" disabled selected>Memuat daftar kelas...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="select-name" class="block text-sm font-medium text-slate-300 mb-1 ml-1">Nama Lengkap</label>
+                        <select id="select-name" required disabled
+                            class="w-full bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text outline-none transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                            <option value="" disabled selected>Pilih kelas terlebih dahulu</option>
+                        </select>
+                    </div>
+                    <div class="mt-3 text-center">
+                        <button type="button" onclick="showNewStudentModal()" class="text-xs text-brand-accent hover:underline">
+                            Nama saya tidak ada di daftar (Siswa Baru)
+                        </button>
+                    </div>
                 </div>
-                <div>
-                    <label for="input-class" class="block text-sm font-medium text-slate-300 mb-1 ml-1">Kelas</label>
-                    <input type="text" id="input-class" required placeholder="Contoh: 7A"
-                        class="w-full bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text placeholder-slate-500 outline-none transition-all">
+
+                <!-- Manual Input Mode (Hidden by default) -->
+                <div id="login-manual-mode" class="hidden">
+                    <div class="mb-4">
+                        <label for="input-class" class="block text-sm font-medium text-slate-300 mb-1 ml-1">Kelas</label>
+                        <input type="text" id="input-class" placeholder="Contoh: 7A"
+                            class="w-full bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text placeholder-slate-500 outline-none transition-all">
+                    </div>
+                    <div>
+                        <label for="input-name" class="block text-sm font-medium text-slate-300 mb-1 ml-1">Nama Lengkap</label>
+                        <input type="text" id="input-name" placeholder="Contoh: Budi Santoso"
+                            class="w-full bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text placeholder-slate-500 outline-none transition-all">
+                    </div>
+                    <div class="mt-3 text-center">
+                        <button type="button" onclick="cancelNewStudent()" class="text-xs text-brand-text-muted hover:text-brand-text hover:underline">
+                            Batal, kembali ke daftar nama
+                        </button>
+                    </div>
                 </div>
+
                 <button type="submit"
                     class="w-full bg-gradient-to-r from-brand-primary to-brand-secondary hover:opacity-90 active:scale-95 text-brand-text font-bold py-4 rounded-xl shadow-lg shadow-brand-primary/25 transition-all mt-6">
                     Mulai Belajar
@@ -522,6 +553,29 @@
         </div>
         </section>
 
+        <!-- MODAL NEW STUDENT WARNING -->
+        <div id="modal-new-student" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+            <div class="bg-brand-dark/90 backdrop-blur-md border border-brand-border rounded-3xl p-6 md:p-8 w-full max-w-sm shadow-2xl relative text-center">
+                <div class="w-16 h-16 bg-yellow-500/20 text-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-brand-text mb-2">Perhatian!</h3>
+                <p class="text-sm text-brand-text-muted mb-6">
+                    Pastikan nama kamu benar-benar belum ada di daftar dropdown kelas. Jika kamu membuat nama baru yang berbeda sedikit saja (misal: ada titik atau singkatan), riwayat nilai lamamu tidak akan tersambung!
+                </p>
+                <div class="flex flex-col gap-3">
+                    <button onclick="confirmNewStudent()" class="w-full bg-brand-primary hover:bg-brand-primary/90 text-brand-text font-bold py-3 rounded-xl transition-all">
+                        Ya, Saya Siswa Baru
+                    </button>
+                    <button onclick="closeNewStudentModal()" class="w-full bg-brand-surface hover:bg-brand-surface/80 text-brand-text py-3 rounded-xl border border-brand-border transition-all">
+                        Kembali Cek Daftar Nama
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- 5. MODE SELECTION MODAL -->
         <div id="modal-mode-select"
             class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
@@ -536,7 +590,22 @@
                 </button>
 
                 <h3 class="text-2xl font-bold text-brand-text mb-2" id="mode-select-title">Pilih Mode</h3>
-                <p class="text-brand-text-muted mb-6">Pilih jenis latihan yang kamu inginkan.</p>
+                <p class="text-brand-text-muted mb-4">Pilih jenis latihan yang kamu inginkan.</p>
+
+                <!-- MONITORING BANNER -->
+                <div id="monitoring-banner" class="hidden mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+                    <div class="flex items-start gap-3">
+                        <div class="text-red-500 mt-1">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-red-400">Masa Pemantauan Aktif!</h4>
+                            <p class="text-sm text-red-300/80 mt-1" id="monitoring-text">Selesaikan X latihan untuk membuka ujian.</p>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="grid grid-cols-1 gap-4">
                     <button onclick="startTraining()"
@@ -570,8 +639,19 @@
                         </div>
                     </button>
 
-                    <button onclick="startExam()"
-                        class="flex items-center gap-4 bg-brand-surface/50 hover:bg-brand-surface border border-brand-border rounded-2xl p-4 transition-all text-left">
+                    <button id="btn-start-exam" onclick="startExam()"
+                        class="relative flex items-center gap-4 bg-brand-surface/50 hover:bg-brand-surface border border-brand-border rounded-2xl p-4 transition-all text-left overflow-hidden">
+                        
+                        <!-- Lock Overlay -->
+                        <div id="exam-lock-overlay" class="hidden absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-10 flex items-center justify-center">
+                            <div class="flex flex-col items-center text-slate-400">
+                                <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                                <span class="text-xs font-bold uppercase tracking-wider">Terkunci</span>
+                            </div>
+                        </div>
+
                         <div class="p-3 bg-brand-accent/20 text-brand-accent rounded-xl">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

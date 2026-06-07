@@ -58,7 +58,8 @@ const state = {
         decimal_add: { minBase: 1, maxBase: 99, shiftA: -1, shiftB: -1, examTimer: 10 },
         decimal_subtract: { minBase: 1, maxBase: 99, shiftA: -1, shiftB: -1, examTimer: 10 },
         decimal_multiply: { minBase: 1, maxBase: 9, shiftA: -1, shiftB: -1, examTimer: 10 },
-        decimal_divide: { minBaseAns: 1, maxBaseAns: 10, minBaseDivisor: 1, maxBaseDivisor: 10, shiftAns: 0, shiftDivisor: -1, examTimer: 10 }
+        decimal_divide: { minBaseAns: 1, maxBaseAns: 10, minBaseDivisor: 1, maxBaseDivisor: 10, shiftAns: 0, shiftDivisor: -1, examTimer: 10 },
+        global_settings: { minExamScore: 90, minPracticeScore: 70, monitoringPracticeCount: 10, practiceQuestionsCount: 10 }
     }
 };
 
@@ -102,6 +103,11 @@ const els = {
     formWelcome: document.getElementById('form-welcome'),
     inputName: document.getElementById('input-name'),
     inputClass: document.getElementById('input-class'),
+    selectName: document.getElementById('select-name'),
+    selectClass: document.getElementById('select-class'),
+    loginDropdownMode: document.getElementById('login-dropdown-mode'),
+    loginManualMode: document.getElementById('login-manual-mode'),
+    modalNewStudent: document.getElementById('modal-new-student'),
     gameScore: document.getElementById('game-score'),
     gameTimer: document.getElementById('game-timer'),
     gameModeLabel: document.getElementById('game-mode-label'),
@@ -179,6 +185,106 @@ async function fetchAppConfig() {
     }
 }
 
+let appStudentList = {};
+
+async function fetchStudentList() {
+    if (typeof window.firebaseDB !== 'undefined' && typeof window.firebaseGet !== 'undefined') {
+        try {
+            const listRef = window.firebaseRef(window.firebaseDB, 'appConfig/students');
+            const snapshot = await window.firebaseGet(listRef);
+            if (snapshot.exists()) {
+                appStudentList = snapshot.val();
+                populateClassDropdown();
+            } else {
+                confirmNewStudent(); // Fallback if no students
+            }
+        } catch (e) {
+            console.error("Gagal mengambil daftar siswa:", e);
+            confirmNewStudent();
+        }
+    } else {
+        setTimeout(fetchStudentList, 1000);
+    }
+}
+
+function populateClassDropdown() {
+    if (!els.selectClass) return;
+    els.selectClass.innerHTML = '<option value="" disabled selected>Pilih Kelas</option>';
+    const classes = Object.keys(appStudentList).sort();
+    classes.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        els.selectClass.appendChild(opt);
+    });
+    els.selectClass.addEventListener('change', populateNameDropdown);
+}
+
+function populateNameDropdown() {
+    if (!els.selectClass || !els.selectName) return;
+    const selectedClass = els.selectClass.value;
+    els.selectName.innerHTML = '<option value="" disabled selected>Pilih Nama</option>';
+    els.selectName.disabled = true;
+
+    if (selectedClass && appStudentList[selectedClass]) {
+        const names = appStudentList[selectedClass].sort();
+        names.forEach(n => {
+            const opt = document.createElement('option');
+            opt.value = n;
+            opt.textContent = n;
+            els.selectName.appendChild(opt);
+        });
+        els.selectName.disabled = false;
+    }
+}
+
+window.showNewStudentModal = function() {
+    if(els.modalNewStudent) els.modalNewStudent.classList.remove('hidden');
+}
+window.closeNewStudentModal = function() {
+    if(els.modalNewStudent) els.modalNewStudent.classList.add('hidden');
+}
+window.confirmNewStudent = function() {
+    if(els.modalNewStudent) els.modalNewStudent.classList.add('hidden');
+    if(els.loginDropdownMode) els.loginDropdownMode.classList.add('hidden');
+    if(els.loginManualMode) els.loginManualMode.classList.remove('hidden');
+    
+    if(els.selectClass) els.selectClass.removeAttribute('required');
+    if(els.selectName) els.selectName.removeAttribute('required');
+    if(els.inputClass) els.inputClass.setAttribute('required', 'true');
+    if(els.inputName) els.inputName.setAttribute('required', 'true');
+}
+window.cancelNewStudent = function() {
+    if(els.loginDropdownMode) els.loginDropdownMode.classList.remove('hidden');
+    if(els.loginManualMode) els.loginManualMode.classList.add('hidden');
+    
+    if(els.selectClass) els.selectClass.setAttribute('required', 'true');
+    if(els.selectName) els.selectName.setAttribute('required', 'true');
+    if(els.inputClass) els.inputClass.removeAttribute('required');
+    if(els.inputName) els.inputName.removeAttribute('required');
+}
+
+async function appendNewStudentToFirebase(className, name) {
+    if (!className || !name) return;
+    const cleanClass = className.trim().toUpperCase();
+    const cleanName = name.trim();
+    
+    try {
+        if (!appStudentList[cleanClass]) {
+            appStudentList[cleanClass] = [];
+        }
+        if (!appStudentList[cleanClass].includes(cleanName)) {
+            appStudentList[cleanClass].push(cleanName);
+            if (typeof window.firebaseDB !== 'undefined' && typeof window.firebaseSet !== 'undefined') {
+                const listRef = window.firebaseRef(window.firebaseDB, 'appConfig/students');
+                await window.firebaseSet(listRef, appStudentList);
+            }
+        }
+    } catch(e) {
+        console.error("Failed to append new student to DB", e);
+    }
+}
+
 function init() {
     loadData();
     initTheme();
@@ -194,7 +300,24 @@ function init() {
     // Event Listeners
     els.formWelcome.addEventListener('submit', (e) => {
         e.preventDefault();
-        saveUser(els.inputName.value, els.inputClass.value);
+        let name = '';
+        let className = '';
+        
+        if (els.loginManualMode && !els.loginManualMode.classList.contains('hidden')) {
+            name = els.inputName.value;
+            className = els.inputClass.value;
+            appendNewStudentToFirebase(className, name);
+        } else {
+            name = els.selectName ? els.selectName.value : '';
+            className = els.selectClass ? els.selectClass.value : '';
+        }
+
+        if (!name || !className) {
+            alert("Harap isi nama dan kelas!");
+            return;
+        }
+
+        saveUser(name, className);
         showMenu();
     });
 
@@ -220,6 +343,7 @@ function init() {
 
     // Fetch Dynamic Configuration
     fetchAppConfig();
+    fetchStudentList();
 }
 
 /**
@@ -484,6 +608,28 @@ function showModeSelectModal(operation) {
         const modeTitle = document.getElementById('mode-select-title');
         if (modeTitle) modeTitle.textContent = getModeName(operation) || 'Pilih Mode';
 
+        // Check monitoring status
+        const banner = document.getElementById('monitoring-banner');
+        const bannerText = document.getElementById('monitoring-text');
+        const lockOverlay = document.getElementById('exam-lock-overlay');
+        const btnExam = document.getElementById('btn-start-exam');
+        
+        const mStatus = state.user.monitoring_status?.[operation];
+        
+        if (mStatus && mStatus.active) {
+            const needed = mStatus.exercises_needed - (mStatus.exercises_done || 0);
+            if (banner) {
+                banner.classList.remove('hidden');
+                if(bannerText) bannerText.textContent = `Selesaikan ${needed} latihan lagi dengan nilai di atas batas minimal untuk membuka ujian.`;
+            }
+            if (lockOverlay) lockOverlay.classList.remove('hidden');
+            if (btnExam) btnExam.classList.add('opacity-80', 'cursor-not-allowed');
+        } else {
+            if (banner) banner.classList.add('hidden');
+            if (lockOverlay) lockOverlay.classList.add('hidden');
+            if (btnExam) btnExam.classList.remove('opacity-80', 'cursor-not-allowed');
+        }
+
         // Check if Focused Mode should be available
         const btnFocused = document.getElementById('btn-focused-mode');
         const weakCount = countWeaknesses(operation);
@@ -619,7 +765,15 @@ function startTraining() {
 
 function startExam() {
     if (!state.selectedModeOp) return;
-    initGame(state.selectedModeOp, 'exam');
+    const mode = state.selectedModeOp;
+    const mStatus = state.user.monitoring_status?.[mode];
+    if (mStatus && mStatus.active) {
+        const minPracticeScore = state.appConfig.global_settings?.minPracticeScore || 70;
+        alert(`🔒 UJIAN TERKUNCI!\nKamu sedang dalam pemantauan. Selesaikan ${mStatus.exercises_needed - (mStatus.exercises_done || 0)} Latihan lagi dengan nilai minimal ${minPracticeScore} untuk membuka ujian.`);
+        closeModeSelect();
+        return;
+    }
+    initGame(mode, 'exam');
     closeModeSelect();
 }
 
@@ -633,6 +787,10 @@ function initGame(mode, type) {
     state.game.isProcessing = false; // Reset lock
     state.game.startTime = new Date();
 
+    // Update config dynamically from global settings
+    if (state.appConfig.global_settings && state.appConfig.global_settings.practiceQuestionsCount) {
+        GAME_CONFIG.practice.count = state.appConfig.global_settings.practiceQuestionsCount;
+    }
     const config = GAME_CONFIG[type];
     state.game.questions = generateQuestions(mode, config.count);
     state.game.currentAnswer = '';
@@ -700,6 +858,10 @@ function initFocusedGame(mode) {
     state.game.startTime = new Date();
 
     // Generate Focused Questions
+    // Update config dynamically
+    if (state.appConfig.global_settings && state.appConfig.global_settings.practiceQuestionsCount) {
+        GAME_CONFIG.practice.count = state.appConfig.global_settings.practiceQuestionsCount;
+    }
     state.game.questions = generateFocusedQuestions(mode, GAME_CONFIG.practice.count);
     state.game.currentAnswer = '';
 
@@ -1209,6 +1371,46 @@ function endGame() {
         maxScore: state.game.type === 'exam' ? (GAME_CONFIG.exam.count * 10) : (GAME_CONFIG.practice.count * 10), // Adjust max score base
         duration: durationSec
     };
+
+    // --- MONITORING LOGIC START ---
+    if (!state.user.monitoring_status) state.user.monitoring_status = {};
+    const opMode = state.game.mode;
+    const targetExamScore = state.appConfig.global_settings?.minExamScore || 90;
+    const minPracticeScore = state.appConfig.global_settings?.minPracticeScore || 70;
+    const requiredPractices = state.appConfig.global_settings?.monitoringPracticeCount || 10;
+    const scorePercentage = (result.score / result.maxScore) * 100;
+    
+    if (state.game.type === 'exam') {
+        if (scorePercentage < targetExamScore) {
+            state.user.monitoring_status[opMode] = {
+                active: true,
+                target_score: targetExamScore,
+                exercises_done: 0,
+                exercises_needed: requiredPractices
+            };
+            setTimeout(() => alert(`⚠️ Nilai Ujianmu ${scorePercentage} (Target: ${targetExamScore}).\nKamu masuk masa Pemantauan! Kamu harus menyelesaikan ${requiredPractices} Latihan sebelum bisa ujian ulang.`), 500);
+        } else {
+            state.user.monitoring_status[opMode] = { active: false };
+        }
+    } else if (state.game.type === 'practice' || state.game.isFocused) {
+        const mStatus = state.user.monitoring_status[opMode];
+        if (mStatus && mStatus.active) {
+            if (scorePercentage >= minPracticeScore) {
+                mStatus.exercises_done = (mStatus.exercises_done || 0) + 1;
+                if (mStatus.exercises_done >= mStatus.exercises_needed) {
+                    mStatus.active = false;
+                    setTimeout(() => alert(`🎉 Selamat! Kamu telah menyelesaikan ${mStatus.exercises_needed} Latihan. Kunci Ujian telah dibuka!`), 500);
+                } else {
+                    setTimeout(() => alert(`👍 Bagus! Progres Latihan Pemantauan: ${mStatus.exercises_done} / ${mStatus.exercises_needed}`), 500);
+                }
+            } else {
+                setTimeout(() => alert(`❌ Nilai Latihanmu ${scorePercentage} (Minimal ${minPracticeScore} agar dihitung pemantauan). Ayo coba lagi!`), 500);
+            }
+        }
+    }
+    // Save updated user state to localStorage
+    localStorage.setItem('math_mastery_user', JSON.stringify(state.user));
+    // --- MONITORING LOGIC END ---
 
     saveResult(result);
 

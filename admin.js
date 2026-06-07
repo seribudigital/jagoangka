@@ -82,6 +82,12 @@ const configSchema = {
         { key: "shiftAns", label: "Shift Hasil (0=Bulat, -1=Pecahan)" },
         { key: "shiftDivisor", label: "Shift Pembagi (-1=Pecahan)" },
         { key: "examTimer", label: "Timer Ujian (Detik)" }
+    ],
+    "global_settings": [
+        { key: "minExamScore", label: "Target Nilai Ujian (Batas Aman)" },
+        { key: "minPracticeScore", label: "Nilai Latihan Diakui (Min)" },
+        { key: "monitoringPracticeCount", label: "Syarat Jumlah Latihan Pemantauan" },
+        { key: "practiceQuestionsCount", label: "Jumlah Soal Latihan per Sesi" }
     ]
 };
 
@@ -93,7 +99,8 @@ const defaultFallback = {
     decimal_add: { minBase: 1, maxBase: 99, shiftA: -1, shiftB: -1, examTimer: 10 },
     decimal_subtract: { minBase: 1, maxBase: 99, shiftA: -1, shiftB: -1, examTimer: 10 },
     decimal_multiply: { minBase: 1, maxBase: 9, shiftA: -1, shiftB: -1, examTimer: 10 },
-    decimal_divide: { minBaseAns: 1, maxBaseAns: 10, minBaseDivisor: 1, maxBaseDivisor: 10, shiftAns: 0, shiftDivisor: -1, examTimer: 10 }
+    decimal_divide: { minBaseAns: 1, maxBaseAns: 10, minBaseDivisor: 1, maxBaseDivisor: 10, shiftAns: 0, shiftDivisor: -1, examTimer: 10 },
+    global_settings: { minExamScore: 90, minPracticeScore: 70, monitoringPracticeCount: 10, practiceQuestionsCount: 10 }
 };
 
 let currentConfigData = {};
