@@ -1027,58 +1027,65 @@ function keypadInput(val) {
 }
 
 function submitAnswer() {
-    if (state.game.isLocked || state.game.isProcessing) return; 
-    if (state.game.currentAnswer === '' || state.game.currentAnswer === '-' || state.game.currentAnswer === '.') return;
+    try {
+        if (state.game.isLocked || state.game.isProcessing) return; 
+        if (state.game.currentAnswer === '' || state.game.currentAnswer === '-' || state.game.currentAnswer === '.') return;
 
-    state.game.isProcessing = true; 
-    
-    const answerDurationInSeconds = (Date.now() - questionStartTime) / 1000;
+        state.game.isProcessing = true; 
+        
+        const answerDurationInSeconds = (Date.now() - questionStartTime) / 1000;
 
-    const isDecimalMode = state.game.mode && state.game.mode.startsWith('decimal_');
-    const userVal = isDecimalMode ? parseFloat(state.game.currentAnswer) : parseInt(state.game.currentAnswer);
-    const correctVal = state.game.questions[state.game.currentQuestionIndex].a;
+        const isDecimalMode = state.game.mode && state.game.mode.startsWith('decimal_');
+        const userVal = isDecimalMode ? parseFloat(state.game.currentAnswer) : parseInt(state.game.currentAnswer);
+        const correctVal = state.game.questions[state.game.currentQuestionIndex].a;
 
-    if (isNaN(userVal)) {
-        state.game.isProcessing = false;
-        return;
-    }
-
-    const isCorrect = isDecimalMode
-        ? Math.abs(userVal - correctVal) < 0.001
-        : userVal === correctVal;
-
-    if (!isCorrect && answerDurationInSeconds < 1.5) {
-        spamAnswerCount++;
-        if (spamAnswerCount >= 3) {
-            triggerAntiSpamLock();
+        if (isNaN(userVal)) {
+            state.game.isProcessing = false;
             return;
         }
-    } else {
-        spamAnswerCount = 0; 
-    }
 
-    if (isCorrect) {
-        handleCorrect();
-        
-        if (currentFocusCategory) {
-            consecutiveCorrectFocusCount++;
-            if (consecutiveCorrectFocusCount >= 5) {
-                if (state.weaknesses[currentFocusCategory] && state.weaknesses[currentFocusCategory].total_salah > 0) {
-                    state.weaknesses[currentFocusCategory].total_salah -= 2; 
-                    if (state.weaknesses[currentFocusCategory].total_salah < 0) {
-                        state.weaknesses[currentFocusCategory].total_salah = 0;
-                    }
-                    localStorage.setItem('math_mastery_weaknesses', JSON.stringify(state.weaknesses));
-                    showToast("Luar Biasa! Pemahamanmu di materi ini meningkat pesat! 🌟", "success");
-                }
-                consecutiveCorrectFocusCount = 0; 
+        const isCorrect = isDecimalMode
+            ? Math.abs(userVal - correctVal) < 0.001
+            : userVal === correctVal;
+
+        if (!isCorrect && answerDurationInSeconds < 1.5) {
+            spamAnswerCount++;
+            if (spamAnswerCount >= 3) {
+                triggerAntiSpamLock();
+                return;
             }
+        } else {
+            spamAnswerCount = 0; 
         }
-    } else {
-        consecutiveCorrectFocusCount = 0; 
-        handleIncorrect();
+
+        if (isCorrect) {
+            handleCorrect();
+            
+            if (currentFocusCategory) {
+                consecutiveCorrectFocusCount++;
+                if (consecutiveCorrectFocusCount >= 5) {
+                    if (state.weaknesses[currentFocusCategory] && state.weaknesses[currentFocusCategory].total_salah > 0) {
+                        state.weaknesses[currentFocusCategory].total_salah -= 2; 
+                        if (state.weaknesses[currentFocusCategory].total_salah < 0) {
+                            state.weaknesses[currentFocusCategory].total_salah = 0;
+                        }
+                        localStorage.setItem('math_mastery_weaknesses', JSON.stringify(state.weaknesses));
+                        showToast("Luar Biasa! Pemahamanmu di materi ini meningkat pesat! 🌟", "success");
+                    }
+                    consecutiveCorrectFocusCount = 0; 
+                }
+            }
+        } else {
+            consecutiveCorrectFocusCount = 0; 
+            handleIncorrect();
+        }
+    } catch (e) {
+        state.game.isProcessing = false;
+        showToast("System error: " + e.message, "error");
+        console.error("submitAnswer error:", e);
     }
 }
+window.submitAnswer = submitAnswer;
 
 function triggerAntiSpamLock() {
     state.game.isLocked = true; 
@@ -1094,56 +1101,62 @@ function triggerAntiSpamLock() {
 }
 
 function handleCorrect() {
-    // Visual Feedback
-    els.inputDisplay.classList.add('border-green-500', 'bg-green-500/20', 'animate-bounce-custom');
-    state.game.score += 10;
+    try {
+        els.inputDisplay.classList.add('border-green-500', 'bg-green-500/20', 'animate-bounce-custom');
+        state.game.score += GAME_CONFIG[state.game.type].pointsPerQuestion || 10;
+        
+        // Badge Logic Updates (Per-Mode tracking)
+        if (state.achievements && state.game.mode && state.achievements[state.game.mode]) {
+            state.achievements[state.game.mode].totalCorrect++;
+            state.achievements[state.game.mode].streak++;
+        }
 
-    // Badge Logic Updates (Per-Mode tracking)
-    state.achievements[state.game.mode].totalCorrect++;
-    state.achievements[state.game.mode].streak++;
+        // Identify current question key
+        const currentQ = state.game.questions[state.game.currentQuestionIndex];
+        trackWeakness(currentQ.q, currentQ.a, state.game.mode, true); // true = correct answer
 
-    // Activity Log Update
-    const today = new Date().toISOString().split('T')[0];
-    state.activityLogs[today] = (state.activityLogs[today] || 0) + 1;
+        saveData();
 
-    // Adaptive Learning: Reduce weakness count
-    // Identify current question key
-    const currentQ = state.game.questions[state.game.currentQuestionIndex];
-    // We need to reconstruct key or store it. Let's use question string as unique enough for now?
-    // actually, let's use a standard key format if possible, but question text is unique per operation usually.
-    // Better to have a helper to generate key?
-    // For now, let's use the question string 'q' as key.
-    trackWeakness(currentQ.q, currentQ.a, state.game.mode, true); // true = correct answer
+        playFeedback(true);
+        checkAchievements();
+        updateScoreUI();
 
-    saveData();
-
-    playFeedback(true);
-    checkAchievements();
-    updateScoreUI();
-
-    setTimeout(() => {
-        els.inputDisplay.classList.remove('border-green-500', 'bg-green-500/20', 'animate-bounce-custom');
-        nextQuestion();
-    }, 500);
+        setTimeout(() => {
+            els.inputDisplay.classList.remove('border-green-500', 'bg-green-500/20', 'animate-bounce-custom');
+            nextQuestion();
+        }, 500);
+    } catch (e) {
+        state.game.isProcessing = false;
+        showToast("System error: " + e.message, "error");
+        console.error("handleCorrect error:", e);
+    }
 }
 
 function handleIncorrect() {
-    els.inputDisplay.classList.add('border-red-500', 'animate-shake', 'bg-red-500/20');
+    try {
+        els.inputDisplay.classList.add('border-red-500', 'animate-shake', 'bg-red-500/20');
 
-    // Adaptive Learning: Track Weakness
-    const currentQ = state.game.questions[state.game.currentQuestionIndex];
-    trackWeakness(currentQ.q, currentQ.a, state.game.mode, false); // false = incorrect answer
+        // Adaptive Learning: Track Weakness
+        const currentQ = state.game.questions[state.game.currentQuestionIndex];
+        trackWeakness(currentQ.q, currentQ.a, state.game.mode, false); // false = incorrect answer
 
-    // Badge Logic Updates (Per-Mode tracking)
-    state.achievements[state.game.mode].streak = 0; // Reset streak
+        // Badge Logic Updates (Per-Mode tracking)
+        if (state.achievements && state.game.mode && state.achievements[state.game.mode]) {
+            state.achievements[state.game.mode].streak = 0; // Reset streak
+        }
 
-    playFeedback(false);
-    updateScoreUI(); // Just in case we want to show streak loss later
+        playFeedback(false);
+        updateScoreUI(); // Just in case we want to show streak loss later
 
-    setTimeout(() => {
-        els.inputDisplay.classList.remove('border-red-500', 'animate-shake', 'bg-red-500/20');
-        nextQuestion();
-    }, 500);
+        setTimeout(() => {
+            els.inputDisplay.classList.remove('border-red-500', 'animate-shake', 'bg-red-500/20');
+            nextQuestion();
+        }, 500);
+    } catch (e) {
+        state.game.isProcessing = false;
+        showToast("System error: " + e.message, "error");
+        console.error("handleIncorrect error:", e);
+    }
 }
 
 function nextQuestion() {
