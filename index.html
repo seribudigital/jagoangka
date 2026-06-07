@@ -458,21 +458,21 @@
         </section>
 
         <!-- 3. GAME SCREEN -->
-        <section id="screen-game" class="hidden w-full max-w-md flex flex-col h-[90vh]">
+        <section id="screen-game" class="hidden w-full max-w-md flex flex-col h-[90vh] relative z-20">
             <!-- Top Bar: Progress & Score -->
             <div class="flex justify-between items-center mb-6">
                 <!-- Left controls -->
                 <div class="flex items-center gap-3">
                     <!-- Back Button -->
-                    <button id="btn-back-game" class="text-brand-text-muted hover:text-brand-text transition-colors">
+                    <button id="btn-back-game" onclick="handleBackGame()" class="text-brand-text-muted hover:text-brand-text transition-colors relative z-30">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                         </svg>
                     </button>
                     <!-- Stop Button (for Exam) -->
-                    <button id="btn-stop-exam"
-                        class="hidden bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-brand-text px-3 py-1 rounded-lg text-sm font-medium transition-all">
+                    <button id="btn-stop-exam" onclick="stopExam()"
+                        class="hidden bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-brand-text px-3 py-1 rounded-lg text-sm font-medium transition-all relative z-30">
                         Stop Ujian
                     </button>
                 </div>

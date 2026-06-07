@@ -401,9 +401,7 @@ function init() {
         if (e.key === 'Enter') submitAnswer();
     });
 
-    // Button Listeners
-    els.btnStopExam.addEventListener('click', stopExam);
-    els.btnBackGame.addEventListener('click', handleBackGame);
+    // Button Listeners (Some are inline in HTML: stopExam, handleBackGame)
     if (els.btnTheme) els.btnTheme.addEventListener('click', toggleTheme);
     if (els.btnSound) els.btnSound.addEventListener('click', toggleMute);
 
