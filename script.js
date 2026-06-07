@@ -626,8 +626,10 @@ function startExam() {
 function initGame(mode, type) {
     state.game.mode = mode;
     state.game.type = type;
+    state.game.isFocused = false;
     state.game.score = 0;
     state.game.currentQuestionIndex = 0;
+    state.game.isLocked = false;
     state.game.isProcessing = false; // Reset lock
     state.game.startTime = new Date();
 
@@ -691,6 +693,7 @@ function startFocusedPractice() {
 function initFocusedGame(mode) {
     state.game.mode = mode;
     state.game.type = 'practice'; // Treat as practice
+    state.game.isFocused = true;
     state.game.score = 0;
     state.game.currentQuestionIndex = 0;
     state.game.isProcessing = false;
@@ -1061,13 +1064,13 @@ function submitAnswer() {
         if (isCorrect) {
             handleCorrect();
             
-            if (currentFocusCategory) {
+            if (state.game.isFocused && state.game.mode) {
                 consecutiveCorrectFocusCount++;
                 if (consecutiveCorrectFocusCount >= 5) {
-                    if (state.weaknesses[currentFocusCategory] && state.weaknesses[currentFocusCategory].total_salah > 0) {
-                        state.weaknesses[currentFocusCategory].total_salah -= 2; 
-                        if (state.weaknesses[currentFocusCategory].total_salah < 0) {
-                            state.weaknesses[currentFocusCategory].total_salah = 0;
+                    if (state.weaknesses[state.game.mode] && state.weaknesses[state.game.mode].total_salah > 0) {
+                        state.weaknesses[state.game.mode].total_salah -= 2; 
+                        if (state.weaknesses[state.game.mode].total_salah < 0) {
+                            state.weaknesses[state.game.mode].total_salah = 0;
                         }
                         localStorage.setItem('math_mastery_weaknesses', JSON.stringify(state.weaknesses));
                         showToast("Luar Biasa! Pemahamanmu di materi ini meningkat pesat! 🌟", "success");
