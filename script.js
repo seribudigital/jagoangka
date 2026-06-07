@@ -122,6 +122,7 @@ const els = {
     gameScore: document.getElementById('game-score'),
     gameTimer: document.getElementById('game-timer'),
     gameModeLabel: document.getElementById('game-mode-label'),
+    gameProgressLabel: document.getElementById('game-progress-label'),
     questionText: document.getElementById('question-text'),
     userAnswer: document.getElementById('user-answer'),
     inputDisplay: document.getElementById('input-display-container'),
@@ -402,7 +403,7 @@ function init() {
 
     // Button Listeners
     els.btnStopExam.addEventListener('click', stopExam);
-    els.btnBackGame.addEventListener('click', showMenu);
+    els.btnBackGame.addEventListener('click', handleBackGame);
     if (els.btnTheme) els.btnTheme.addEventListener('click', toggleTheme);
     if (els.btnSound) els.btnSound.addEventListener('click', toggleMute);
 
@@ -901,12 +902,18 @@ function initGame(mode, type) {
     // UI Toggles for Exam vs Practice
     if (type === 'exam') {
         els.btnStopExam.classList.remove('hidden');
-        els.btnBackGame.classList.add('hidden');
         els.examTimerContainer.classList.remove('hidden');
     } else {
         els.btnStopExam.classList.add('hidden');
-        els.btnBackGame.classList.remove('hidden');
         els.examTimerContainer.classList.add('hidden');
+    }
+
+    if (els.gameProgressLabel) {
+        if (state.game.questions && state.game.questions.length > 0) {
+            els.gameProgressLabel.classList.remove('hidden');
+        } else {
+            els.gameProgressLabel.classList.add('hidden');
+        }
     }
 
     showGame();
@@ -918,6 +925,17 @@ function initGame(mode, type) {
 window.stopExam = stopExam;
 function stopExam() {
     if (confirm('Yakin ingin menghentikan ujian? Hasil tidak akan disimpan.')) {
+        clearInterval(timerInterval);
+        clearInterval(questionTimerInterval);
+        showMenu();
+    }
+}
+
+window.handleBackGame = handleBackGame;
+function handleBackGame() {
+    if (state.game.type === 'exam') {
+        stopExam();
+    } else {
         clearInterval(timerInterval);
         clearInterval(questionTimerInterval);
         showMenu();
@@ -1234,6 +1252,12 @@ function renderQuestion() {
     els.questionText.textContent = curr.q;
     els.userAnswer.textContent = '';
     state.game.currentAnswer = '';
+
+    if (els.gameProgressLabel) {
+        const total = state.game.questions.length;
+        const current = state.game.currentQuestionIndex + 1;
+        els.gameProgressLabel.textContent = `Soal ${current} / ${total}`;
+    }
 
     // [ANTI-SPAM] Catat waktu awal soal dirender
     questionStartTime = Date.now();
