@@ -408,11 +408,20 @@ window.handleLandingAction = handleLandingAction;
 window.startFocusedPractice = startFocusedPractice;
 
 function showMenu() {
-    hideAllScreens();
-    screens.menu.classList.remove('hidden');
-    els.header.classList.remove('hidden');
-    updateBackground(false);
-    updateDashboardRecommendation();
+    try {
+        state.game.isProcessing = false;
+        hideAllScreens();
+        screens.menu.classList.remove('hidden');
+        els.header.classList.remove('hidden');
+        updateBackground(false);
+        try {
+            updateDashboardRecommendation();
+        } catch (e) {
+            console.error("Dashboard error:", e);
+        }
+    } catch (err) {
+        console.error("showMenu error:", err);
+    }
 }
 
 function showGame() {
@@ -468,31 +477,48 @@ function updateBackground(isWelcome) {
 }
 
 function showModeSelectModal(operation) {
-    state.selectedModeOp = operation;
+    try {
+        state.selectedModeOp = operation;
 
-    // Update modal title based on operation
-    const modeTitle = document.getElementById('mode-select-title');
-    if (modeTitle) modeTitle.textContent = getModeName(operation) || 'Pilih Mode';
+        // Update modal title based on operation
+        const modeTitle = document.getElementById('mode-select-title');
+        if (modeTitle) modeTitle.textContent = getModeName(operation) || 'Pilih Mode';
 
-    // Check if Focused Mode should be available
-    const btnFocused = document.getElementById('btn-focused-mode');
-    const weakCount = countWeaknesses(operation);
+        // Check if Focused Mode should be available
+        const btnFocused = document.getElementById('btn-focused-mode');
+        const weakCount = countWeaknesses(operation);
 
-    if (weakCount > 0) {
-        btnFocused.classList.remove('hidden');
-        btnFocused.classList.add('flex'); // Ensure flex display
-    } else {
-        btnFocused.classList.add('hidden');
-        btnFocused.classList.remove('flex');
+        if (btnFocused) {
+            if (weakCount > 0) {
+                btnFocused.classList.remove('hidden');
+                btnFocused.classList.add('flex'); // Ensure flex display
+            } else {
+                btnFocused.classList.add('hidden');
+                btnFocused.classList.remove('flex');
+            }
+        }
+
+        if (screens.modalMode) {
+            screens.modalMode.classList.remove('hidden');
+        }
+    } catch (e) {
+        console.error("showModeSelectModal error:", e);
     }
-
-    screens.modalMode.classList.remove('hidden');
 }
 
 function countWeaknesses(mode) {
-    if (!state.weaknesses[mode]) return 0;
-    // Count items with > 2 errors
-    return Object.values(state.weaknesses[mode]).filter(item => item.count > 2).length;
+    if (!state.weaknesses || !state.weaknesses[mode]) return 0;
+    
+    try {
+        const weakness = state.weaknesses[mode];
+        if (typeof weakness.total_salah !== 'undefined') {
+            return weakness.total_salah;
+        }
+        
+        return Object.values(weakness).filter(item => item && item.count > 2).length;
+    } catch (e) {
+        return 0;
+    }
 }
 
 function closeModeSelect() {
@@ -688,18 +714,46 @@ function initFocusedGame(mode) {
     renderQuestion();
     startTimer();
 }
-
 function generateFocusedQuestions(mode, count) {
     const questions = [];
     const weakItems = [];
 
     // 1. Collect Weaknesses (> 2 errors)
-    if (state.weaknesses[mode]) {
-        Object.values(state.weaknesses[mode]).forEach(item => {
-            if (item.count > 2) {
-                weakItems.push(item);
+    if (state.weaknesses && state.weaknesses[mode]) {
+        try {
+            const weakness = state.weaknesses[mode];
+            if (typeof weakness.total_salah !== 'undefined' && Array.isArray(weakness.contoh_kasus)) {
+                weakness.contoh_kasus.forEach(qStr => {
+                    const operators = ['+', '-', '×', '÷'];
+                    for (let op of operators) {
+                        if (qStr.includes(` ${op} `)) {
+                            let parts = qStr.split(` ${op} `);
+                            if (parts.length === 2) {
+                                let num1 = parseFloat(parts[0].replace(/[()]/g, ''));
+                                let num2 = parseFloat(parts[1].replace(/[()]/g, ''));
+                                if (!isNaN(num1) && !isNaN(num2)) {
+                                    let a;
+                                    if (op === '+') a = num1 + num2;
+                                    else if (op === '-') a = num1 - num2;
+                                    else if (op === '×') a = num1 * num2;
+                                    else if (op === '÷') a = num1 / num2;
+                                    weakItems.push({ q: qStr, a: a });
+                                }
+                            }
+                            break;
+                        }
+                    }
+                });
+            } else {
+                Object.values(weakness).forEach(item => {
+                    if (item && item.count > 2) {
+                        weakItems.push(item);
+                    }
+                });
             }
-        });
+        } catch (e) {
+            console.error("Error reading weaknesses:", e);
+        }
     }
 
     // 2. Determine Strategy
