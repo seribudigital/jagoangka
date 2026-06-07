@@ -1100,6 +1100,18 @@ function generateSingleQuestion(mode) {
     return { q, a: ans };
 }
 
+function isKeyboardOpen() {
+    return window.innerHeight < screen.height * 0.7; // Asumsi jika tinggi viewport < 70% layar
+}
+
+window.logoutUser = function() {
+    if (confirm('Apakah Anda yakin ingin mengganti akun? Data latihan saat ini akan disetel ulang.')) {
+        localStorage.removeItem('math_mastery_user');
+        location.reload();
+    }
+}
+
+
 function rand(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
