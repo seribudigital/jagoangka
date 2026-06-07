@@ -26,7 +26,11 @@ const els = {
     btnLogout: document.getElementById('btn-logout'),
     btnSave: document.getElementById('btn-save'),
     btnRegister: document.getElementById('btn-register'),
-    configForms: document.getElementById('config-forms')
+    configForms: document.getElementById('config-forms'),
+    inputImportStudents: document.getElementById('input-import-students'),
+    btnImportStudents: document.getElementById('btn-import-students'),
+    checkResetStudents: document.getElementById('check-reset-students'),
+    importStatus: document.getElementById('import-status')
 };
 
 const configSchema = {
@@ -241,5 +245,112 @@ els.btnSave.addEventListener('click', async () => {
     } catch (e) {
         alert("Gagal menyimpan. Pastikan Rule Database Firebase benar.");
         els.btnSave.textContent = "Simpan Config";
+    }
+});
+
+// ===== IMPORT STUDENTS LOGIC =====
+function showImportStatus(msg, isError = false) {
+    els.importStatus.textContent = msg;
+    els.importStatus.className = `text-sm font-medium mt-4 ${isError ? 'text-red-400' : 'text-brand-accent'}`;
+    els.importStatus.classList.remove('hidden');
+}
+
+els.btnImportStudents.addEventListener('click', async () => {
+    const file = els.inputImportStudents.files[0];
+    if (!file) {
+        showImportStatus("Silakan pilih file terlebih dahulu!", true);
+        return;
+    }
+
+    const resetOld = els.checkResetStudents.checked;
+    els.btnImportStudents.textContent = "Memproses...";
+    els.btnImportStudents.disabled = true;
+    showImportStatus("Membaca file...");
+
+    try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                let parsedData = {};
+                
+                if (file.name.endsWith('.json')) {
+                    const text = e.target.result;
+                    parsedData = JSON.parse(text);
+                } else {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const firstSheet = workbook.Sheets[firstSheetName];
+                    const rows = XLSX.utils.sheet_to_json(firstSheet, {defval: ""});
+                    
+                    rows.forEach(row => {
+                        let kKelas = Object.keys(row).find(k => k.toLowerCase() === 'kelas');
+                        let kNama = Object.keys(row).find(k => k.toLowerCase() === 'nama');
+                        
+                        if (kKelas && kNama && row[kKelas] && row[kNama]) {
+                            let kelasVal = String(row[kKelas]).replace(/\s+/g, '').toUpperCase();
+                            let namaVal = String(row[kNama]).trim();
+                            
+                            if (kelasVal && namaVal) {
+                                if (!parsedData[kelasVal]) parsedData[kelasVal] = [];
+                                if (!parsedData[kelasVal].includes(namaVal)) {
+                                    parsedData[kelasVal].push(namaVal);
+                                }
+                            }
+                        }
+                    });
+                }
+
+                if (Object.keys(parsedData).length === 0) {
+                    showImportStatus("Format tidak sesuai atau data kosong. Pastikan ada kolom 'Kelas' dan 'Nama'.", true);
+                    return;
+                }
+
+                let finalData = parsedData;
+                if (!resetOld) {
+                    const existingSnap = await get(ref(db, 'appConfig/students'));
+                    if (existingSnap.exists()) {
+                        const existingData = existingSnap.val();
+                        finalData = existingData;
+                        
+                        for (const kelas in parsedData) {
+                            if (!finalData[kelas]) finalData[kelas] = [];
+                            parsedData[kelas].forEach(nama => {
+                                if (!finalData[kelas].includes(nama)) {
+                                    finalData[kelas].push(nama);
+                                }
+                            });
+                        }
+                    }
+                }
+
+                const sortedFinal = {};
+                Object.keys(finalData).sort().forEach(c => {
+                    sortedFinal[c] = finalData[c].sort();
+                });
+
+                showImportStatus("Menyimpan ke database...");
+                await set(ref(db, 'appConfig/students'), sortedFinal);
+                
+                showImportStatus(`✅ Import berhasil! Disimpan ${Object.keys(sortedFinal).length} kelas.`);
+                els.inputImportStudents.value = "";
+            } catch (err) {
+                console.error("Parse Error:", err);
+                showImportStatus("Gagal memproses file: " + err.message, true);
+            } finally {
+                els.btnImportStudents.textContent = "Proses Import";
+                els.btnImportStudents.disabled = false;
+            }
+        };
+
+        if (file.name.endsWith('.json')) {
+            reader.readAsText(file);
+        } else {
+            reader.readAsArrayBuffer(file);
+        }
+    } catch (e) {
+        showImportStatus("Terjadi kesalahan sistem.", true);
+        els.btnImportStudents.textContent = "Proses Import";
+        els.btnImportStudents.disabled = false;
     }
 });
