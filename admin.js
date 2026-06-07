@@ -316,8 +316,29 @@ els.btnImportStudents.addEventListener('click', async () => {
                     const existingSnap = await get(ref(db, 'appConfig/students'));
                     if (existingSnap.exists()) {
                         const existingData = existingSnap.val();
-                        finalData = existingData;
+                        finalData = {};
                         
+                        // Normalisasi data yang ada sebelum di-merge
+                        for (const kelas in existingData) {
+                            finalData[kelas] = {};
+                            const classData = existingData[kelas];
+                            if (Array.isArray(classData)) {
+                                classData.forEach(name => {
+                                    if (name && typeof name === 'string') finalData[kelas][name] = "1234";
+                                });
+                            } else if (typeof classData === 'object') {
+                                for (const key in classData) {
+                                    if (!isNaN(key)) {
+                                        const name = classData[key];
+                                        if (name && typeof name === 'string') finalData[kelas][name] = "1234";
+                                    } else {
+                                        finalData[kelas][key] = classData[key];
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Merge dengan data baru yang di-import
                         for (const kelas in parsedData) {
                             if (!finalData[kelas]) finalData[kelas] = {};
                             for (const nama in parsedData[kelas]) {
@@ -368,7 +389,30 @@ els.btnImportStudents.addEventListener('click', async () => {
 async function loadAdminStudents() {
     const snap = await get(ref(db, 'appConfig/students'));
     if (snap.exists()) {
-        adminStudentData = snap.val();
+        const rawData = snap.val();
+        adminStudentData = {};
+        
+        // Normalisasi struktur (mengubah format array lama menjadi object dengan PIN)
+        for (const kelas in rawData) {
+            adminStudentData[kelas] = {};
+            const classData = rawData[kelas];
+            
+            if (Array.isArray(classData)) {
+                classData.forEach(name => {
+                    if (name && typeof name === 'string') adminStudentData[kelas][name] = "1234";
+                });
+            } else if (typeof classData === 'object') {
+                for (const key in classData) {
+                    if (!isNaN(key)) {
+                        // Format array lama yang tersimpan sebagai object (key 0, 1, 2)
+                        const name = classData[key];
+                        if (name && typeof name === 'string') adminStudentData[kelas][name] = "1234";
+                    } else {
+                        adminStudentData[kelas][key] = classData[key];
+                    }
+                }
+            }
+        }
     } else {
         adminStudentData = {};
     }

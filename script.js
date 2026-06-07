@@ -203,7 +203,31 @@ async function fetchStudentList() {
             const listRef = window.firebaseRef(window.firebaseDB, 'appConfig/students');
             const snapshot = await window.firebaseGet(listRef);
             if (snapshot.exists()) {
-                appStudentList = snapshot.val();
+                const rawData = snapshot.val();
+                appStudentList = {};
+                
+                // Normalisasi struktur (mengubah format array lama menjadi object dengan PIN)
+                for (const kelas in rawData) {
+                    appStudentList[kelas] = {};
+                    const classData = rawData[kelas];
+                    
+                    if (Array.isArray(classData)) {
+                        classData.forEach(name => {
+                            if (name && typeof name === 'string') appStudentList[kelas][name] = "1234";
+                        });
+                    } else if (typeof classData === 'object') {
+                        for (const key in classData) {
+                            if (!isNaN(key)) {
+                                // Format array lama yang tersimpan sebagai object (key 0, 1, 2)
+                                const name = classData[key];
+                                if (name && typeof name === 'string') appStudentList[kelas][name] = "1234";
+                            } else {
+                                appStudentList[kelas][key] = classData[key];
+                            }
+                        }
+                    }
+                }
+                
                 populateClassDropdown();
             } else {
                 confirmNewStudent(); // Fallback if no students
