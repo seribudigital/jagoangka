@@ -277,6 +277,12 @@
                             <option value="" disabled selected>Pilih kelas terlebih dahulu</option>
                         </select>
                     </div>
+                    <div id="container-pin-dropdown" class="mt-4 hidden animate-fade-in">
+                        <label for="input-pin" class="block text-sm font-medium text-slate-300 mb-1 ml-1">Masukkan PIN</label>
+                        <input type="password" id="input-pin" inputmode="numeric" pattern="[0-9]*" placeholder="****"
+                            class="w-full text-center tracking-[0.5em] text-xl font-bold bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text placeholder-slate-500 outline-none transition-all">
+                        <p id="error-pin" class="text-red-400 text-xs mt-2 text-center hidden font-medium">PIN Salah! Coba lagi.</p>
+                    </div>
                     <div class="mt-3 text-center">
                         <button type="button" onclick="showNewStudentModal()" class="text-xs text-brand-accent hover:underline">
                             Nama saya tidak ada di daftar (Siswa Baru)
@@ -296,6 +302,11 @@
                         <input type="text" id="input-name" placeholder="Contoh: Budi Santoso"
                             class="w-full bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text placeholder-slate-500 outline-none transition-all">
                     </div>
+                    <div class="mt-4">
+                        <label for="input-new-pin" class="block text-sm font-medium text-slate-300 mb-1 ml-1">Buat PIN (Untuk Login Selanjutnya)</label>
+                        <input type="password" id="input-new-pin" inputmode="numeric" pattern="[0-9]*" placeholder="Contoh: 1234"
+                            class="w-full text-center tracking-[0.5em] text-xl font-bold bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text placeholder-slate-500 outline-none transition-all">
+                    </div>
                     <div class="mt-3 text-center">
                         <button type="button" onclick="cancelNewStudent()" class="text-xs text-brand-text-muted hover:text-brand-text hover:underline">
                             Batal, kembali ke daftar nama
@@ -312,6 +323,22 @@
 
         <!-- 2. MENU SCREEN -->
         <section id="screen-menu" class="hidden w-full max-w-4xl p-4">
+            <!-- Warning Banner Default PIN -->
+            <div id="banner-change-pin" class="hidden mb-6 bg-orange-500/10 border border-orange-500/50 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in">
+                <div class="flex items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-orange-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div>
+                        <h3 class="text-orange-400 font-bold">Keamanan Akun</h3>
+                        <p class="text-sm text-brand-text-muted mt-1">Anda masih menggunakan PIN default (1234). Segera ganti PIN Anda agar progres belajar tidak diakses orang lain.</p>
+                    </div>
+                </div>
+                <button onclick="showChangePinModal()" class="shrink-0 bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-xl transition-colors">
+                    Ganti PIN Sekarang
+                </button>
+            </div>
+
             <h2
                 class="text-3xl md:text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-brand-text to-brand-text-muted">
                 Pilih Tantanganmu
@@ -1253,6 +1280,30 @@
             <h3 class="text-xl font-bold text-yellow-500 mb-1">Badge Unlocked!</h3>
             <p id="badge-toast-title" class="text-lg font-bold text-white mb-1">Si Kilat</p>
             <p id="badge-toast-desc" class="text-sm text-brand-text-muted">Keterangan...</p>
+        </div>
+    </div>
+
+    <!-- Modal Ganti PIN -->
+    <div id="modal-change-pin" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden animate-fade-in opacity-0 transition-opacity duration-300">
+        <div class="bg-brand-surface border border-brand-border rounded-3xl w-full max-w-sm p-6 md:p-8 shadow-2xl relative scale-95 transition-transform duration-300">
+            <h2 class="text-2xl font-bold text-center mb-6">Ganti PIN</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1 ml-1">PIN Lama</label>
+                    <input type="password" id="input-old-pin" inputmode="numeric" pattern="[0-9]*" class="w-full text-center tracking-[0.5em] text-xl font-bold bg-brand-dark/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1 ml-1">PIN Baru</label>
+                    <input type="password" id="input-new-pin-change" inputmode="numeric" pattern="[0-9]*" class="w-full text-center tracking-[0.5em] text-xl font-bold bg-brand-dark/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text outline-none">
+                </div>
+                <p id="error-change-pin" class="text-red-400 text-sm text-center hidden"></p>
+                <button onclick="submitChangePin()" class="w-full bg-brand-accent hover:bg-brand-accent/90 text-brand-text font-bold py-3 rounded-xl transition-all shadow-lg mt-2">
+                    Simpan PIN Baru
+                </button>
+                <button onclick="hideChangePinModal()" class="w-full bg-transparent hover:bg-white/5 text-brand-text-muted font-semibold py-3 rounded-xl transition-all">
+                    Batal
+                </button>
+            </div>
         </div>
     </div>
 

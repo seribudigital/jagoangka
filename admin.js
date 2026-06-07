@@ -30,8 +30,12 @@ const els = {
     inputImportStudents: document.getElementById('input-import-students'),
     btnImportStudents: document.getElementById('btn-import-students'),
     checkResetStudents: document.getElementById('check-reset-students'),
-    importStatus: document.getElementById('import-status')
+    importStatus: document.getElementById('import-status'),
+    selectAdminClass: document.getElementById('select-admin-class'),
+    tableAdminStudents: document.getElementById('table-admin-students')
 };
+
+let adminStudentData = {};
 
 const configSchema = {
     "multiply": [
@@ -116,6 +120,7 @@ onAuthStateChanged(auth, (user) => {
         els.screenDashboard.classList.remove('hidden');
         els.btnLogout.classList.remove('hidden');
         loadConfigData();
+        loadAdminStudents();
     } else {
         els.screenLogin.classList.remove('hidden');
         els.screenDashboard.classList.add('hidden');
@@ -286,16 +291,16 @@ els.btnImportStudents.addEventListener('click', async () => {
                     rows.forEach(row => {
                         let kKelas = Object.keys(row).find(k => k.toLowerCase() === 'kelas');
                         let kNama = Object.keys(row).find(k => k.toLowerCase() === 'nama');
+                        let kPin = Object.keys(row).find(k => k.toLowerCase() === 'pin');
                         
                         if (kKelas && kNama && row[kKelas] && row[kNama]) {
                             let kelasVal = String(row[kKelas]).replace(/\s+/g, '').toUpperCase();
                             let namaVal = String(row[kNama]).trim();
+                            let pinVal = (kPin && row[kPin]) ? String(row[kPin]).trim() : "1234";
                             
                             if (kelasVal && namaVal) {
-                                if (!parsedData[kelasVal]) parsedData[kelasVal] = [];
-                                if (!parsedData[kelasVal].includes(namaVal)) {
-                                    parsedData[kelasVal].push(namaVal);
-                                }
+                                if (!parsedData[kelasVal]) parsedData[kelasVal] = {};
+                                parsedData[kelasVal][namaVal] = pinVal;
                             }
                         }
                     });
@@ -314,19 +319,20 @@ els.btnImportStudents.addEventListener('click', async () => {
                         finalData = existingData;
                         
                         for (const kelas in parsedData) {
-                            if (!finalData[kelas]) finalData[kelas] = [];
-                            parsedData[kelas].forEach(nama => {
-                                if (!finalData[kelas].includes(nama)) {
-                                    finalData[kelas].push(nama);
-                                }
-                            });
+                            if (!finalData[kelas]) finalData[kelas] = {};
+                            for (const nama in parsedData[kelas]) {
+                                finalData[kelas][nama] = parsedData[kelas][nama];
+                            }
                         }
                     }
                 }
 
                 const sortedFinal = {};
                 Object.keys(finalData).sort().forEach(c => {
-                    sortedFinal[c] = finalData[c].sort();
+                    sortedFinal[c] = {};
+                    Object.keys(finalData[c]).sort().forEach(n => {
+                        sortedFinal[c][n] = finalData[c][n];
+                    });
                 });
 
                 showImportStatus("Menyimpan ke database...");
@@ -334,6 +340,9 @@ els.btnImportStudents.addEventListener('click', async () => {
                 
                 showImportStatus(`✅ Import berhasil! Disimpan ${Object.keys(sortedFinal).length} kelas.`);
                 els.inputImportStudents.value = "";
+                
+                // Refresh admin table
+                loadAdminStudents();
             } catch (err) {
                 console.error("Parse Error:", err);
                 showImportStatus("Gagal memproses file: " + err.message, true);
@@ -354,3 +363,82 @@ els.btnImportStudents.addEventListener('click', async () => {
         els.btnImportStudents.disabled = false;
     }
 });
+
+// ===== ADMIN STUDENT MANAGEMENT (PIN RESET) =====
+async function loadAdminStudents() {
+    const snap = await get(ref(db, 'appConfig/students'));
+    if (snap.exists()) {
+        adminStudentData = snap.val();
+    } else {
+        adminStudentData = {};
+    }
+    
+    // Populate class dropdown
+    els.selectAdminClass.innerHTML = '<option value="" disabled selected>Pilih Kelas</option>';
+    Object.keys(adminStudentData).sort().forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        els.selectAdminClass.appendChild(opt);
+    });
+    
+    els.tableAdminStudents.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center text-brand-text-muted">Pilih kelas untuk melihat data.</td></tr>';
+}
+
+els.selectAdminClass.addEventListener('change', () => {
+    const selectedClass = els.selectAdminClass.value;
+    if (!selectedClass || !adminStudentData[selectedClass]) return;
+    
+    const studentsObj = adminStudentData[selectedClass];
+    const sortedNames = Object.keys(studentsObj).sort();
+    
+    if (sortedNames.length === 0) {
+        els.tableAdminStudents.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center text-brand-text-muted">Kelas kosong.</td></tr>';
+        return;
+    }
+    
+    els.tableAdminStudents.innerHTML = '';
+    sortedNames.forEach(name => {
+        const currentPin = studentsObj[name];
+        const isDefault = currentPin === "1234";
+        
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-brand-surface/50 transition-colors";
+        tr.innerHTML = `
+            <td class="px-6 py-4 font-medium">${name}</td>
+            <td class="px-6 py-4">
+                <span class="px-2 py-1 rounded text-xs font-bold ${isDefault ? 'bg-orange-500/20 text-orange-400' : 'bg-green-500/20 text-green-400'}">
+                    ${currentPin}
+                </span>
+            </td>
+            <td class="px-6 py-4 text-right">
+                <button class="btn-reset-pin text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition-colors text-white" data-class="${selectedClass}" data-name="${name}">
+                    Reset (1234)
+                </button>
+            </td>
+        `;
+        els.tableAdminStudents.appendChild(tr);
+    });
+    
+    // Add reset listeners
+    document.querySelectorAll('.btn-reset-pin').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const cls = e.target.getAttribute('data-class');
+            const nm = e.target.getAttribute('data-name');
+            if (confirm(`Yakin mereset PIN ${nm} di kelas ${cls} menjadi 1234?`)) {
+                try {
+                    await set(ref(db, \`appConfig/students/\${cls}/\${nm}\`), "1234");
+                    // Refresh data
+                    loadAdminStudents().then(() => {
+                        els.selectAdminClass.value = cls;
+                        els.selectAdminClass.dispatchEvent(new Event('change'));
+                    });
+                    alert("PIN berhasil direset ke 1234.");
+                } catch(err) {
+                    alert("Gagal mereset PIN: " + err.message);
+                }
+            }
+        });
+    });
+}
+);

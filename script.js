@@ -6,7 +6,8 @@
 const state = {
     user: {
         name: '',
-        class: ''
+        class: '',
+        pin: ''
     },
     game: {
         mode: null, // 'multiply', 'divide', 'add', 'subtract'
@@ -107,6 +108,15 @@ const els = {
     selectClass: document.getElementById('select-class'),
     loginDropdownMode: document.getElementById('login-dropdown-mode'),
     loginManualMode: document.getElementById('login-manual-mode'),
+    containerPinDropdown: document.getElementById('container-pin-dropdown'),
+    inputPin: document.getElementById('input-pin'),
+    errorPin: document.getElementById('error-pin'),
+    inputNewPin: document.getElementById('input-new-pin'),
+    bannerChangePin: document.getElementById('banner-change-pin'),
+    modalChangePin: document.getElementById('modal-change-pin'),
+    inputOldPin: document.getElementById('input-old-pin'),
+    inputNewPinChange: document.getElementById('input-new-pin-change'),
+    errorChangePin: document.getElementById('error-change-pin'),
     modalNewStudent: document.getElementById('modal-new-student'),
     gameScore: document.getElementById('game-score'),
     gameTimer: document.getElementById('game-timer'),
@@ -227,7 +237,7 @@ function populateNameDropdown() {
     els.selectName.disabled = true;
 
     if (selectedClass && appStudentList[selectedClass]) {
-        const names = appStudentList[selectedClass].sort();
+        const names = Object.keys(appStudentList[selectedClass]).sort();
         names.forEach(n => {
             const opt = document.createElement('option');
             opt.value = n;
@@ -237,6 +247,17 @@ function populateNameDropdown() {
         els.selectName.disabled = false;
     }
 }
+
+els.selectName.addEventListener('change', () => {
+    if (els.selectName.value) {
+        els.containerPinDropdown.classList.remove('hidden');
+        els.inputPin.value = '';
+        els.errorPin.classList.add('hidden');
+        els.inputPin.focus();
+    } else {
+        els.containerPinDropdown.classList.add('hidden');
+    }
+});
 
 window.showNewStudentModal = function() {
     if(els.modalNewStudent) els.modalNewStudent.classList.remove('hidden');
@@ -262,19 +283,21 @@ window.cancelNewStudent = function() {
     if(els.selectName) els.selectName.setAttribute('required', 'true');
     if(els.inputClass) els.inputClass.removeAttribute('required');
     if(els.inputName) els.inputName.removeAttribute('required');
+    if(els.inputNewPin) els.inputNewPin.removeAttribute('required');
 }
 
-async function appendNewStudentToFirebase(className, name) {
+async function appendNewStudentToFirebase(className, name, pin) {
     if (!className || !name) return;
     const cleanClass = className.trim().toUpperCase();
     const cleanName = name.trim();
+    const cleanPin = pin ? pin.trim() : "1234";
     
     try {
         if (!appStudentList[cleanClass]) {
-            appStudentList[cleanClass] = [];
+            appStudentList[cleanClass] = {};
         }
-        if (!appStudentList[cleanClass].includes(cleanName)) {
-            appStudentList[cleanClass].push(cleanName);
+        if (!appStudentList[cleanClass][cleanName]) {
+            appStudentList[cleanClass][cleanName] = cleanPin;
             if (typeof window.firebaseDB !== 'undefined' && typeof window.firebaseSet !== 'undefined') {
                 const listRef = window.firebaseRef(window.firebaseDB, 'appConfig/students');
                 await window.firebaseSet(listRef, appStudentList);
@@ -302,14 +325,30 @@ function init() {
         e.preventDefault();
         let name = '';
         let className = '';
+        let pin = '';
         
         if (els.loginManualMode && !els.loginManualMode.classList.contains('hidden')) {
             name = els.inputName.value;
             className = els.inputClass.value;
-            appendNewStudentToFirebase(className, name);
+            pin = els.inputNewPin.value || "1234";
+            if (pin.length < 4) {
+                alert("PIN harus terdiri dari minimal 4 angka!");
+                return;
+            }
+            appendNewStudentToFirebase(className, name, pin);
         } else {
             name = els.selectName ? els.selectName.value : '';
             className = els.selectClass ? els.selectClass.value : '';
+            pin = els.inputPin.value;
+            
+            if (name && className) {
+                const correctPin = appStudentList[className][name] || "1234";
+                if (pin !== correctPin) {
+                    els.errorPin.classList.remove('hidden');
+                    return;
+                }
+                els.errorPin.classList.add('hidden');
+            }
         }
 
         if (!name || !className) {
@@ -317,7 +356,7 @@ function init() {
             return;
         }
 
-        saveUser(name, className);
+        saveUser(name, className, pin);
         showMenu();
     });
 
@@ -452,7 +491,7 @@ function saveData() {
     localStorage.setItem('math_mastery_weaknesses', JSON.stringify(state.weaknesses));
 }
 
-function saveUser(name, className) {
+function saveUser(name, className, pin) {
     const isNewUser = (!state.user || !state.user.name) || (state.user.name.trim().toLowerCase() !== name.trim().toLowerCase());
 
     if (isNewUser) {
@@ -482,6 +521,8 @@ function saveUser(name, className) {
 
     state.user.name = name;
     state.user.class = className;
+    if (pin) state.user.pin = pin;
+    
     localStorage.setItem('math_mastery_user', JSON.stringify(state.user));
     updateGreeting();
 }
@@ -526,8 +567,6 @@ function handleLandingAction() {
 
 window.showWelcome = showWelcome;
 window.showLanding = showLanding;
-window.showWelcome = showWelcome;
-window.showLanding = showLanding;
 window.handleLandingAction = handleLandingAction;
 window.startFocusedPractice = startFocusedPractice;
 
@@ -543,8 +582,14 @@ function showMenu() {
         } catch (e) {
             console.error("Dashboard error:", e);
         }
-    } catch (err) {
-        console.error("showMenu error:", err);
+        
+        if (state.user.pin === "1234") {
+            els.bannerChangePin.classList.remove('hidden');
+        } else {
+            els.bannerChangePin.classList.add('hidden');
+        }
+    } catch (e) {
+        console.error("Error showing menu:", e);
     }
 }
 
@@ -2554,6 +2599,83 @@ window.selectIntegerOp = selectIntegerOp;
 window.showDecimalModeSelect = showDecimalModeSelect;
 window.closeDecimalSelect = closeDecimalSelect;
 window.selectDecimalOp = selectDecimalOp;
+
+// ===== CHANGE PIN LOGIC =====
+window.showChangePinModal = function() {
+    els.modalChangePin.classList.remove('hidden');
+    setTimeout(() => {
+        els.modalChangePin.classList.remove('opacity-0');
+        els.modalChangePin.querySelector('.bg-brand-surface').classList.remove('scale-95');
+    }, 10);
+    els.inputOldPin.value = '';
+    els.inputNewPinChange.value = '';
+    els.errorChangePin.classList.add('hidden');
+}
+
+window.hideChangePinModal = function() {
+    els.modalChangePin.classList.add('opacity-0');
+    els.modalChangePin.querySelector('.bg-brand-surface').classList.add('scale-95');
+    setTimeout(() => {
+        els.modalChangePin.classList.add('hidden');
+    }, 300);
+}
+
+window.submitChangePin = async function() {
+    const oldPin = els.inputOldPin.value;
+    const newPin = els.inputNewPinChange.value;
+    
+    els.errorChangePin.classList.remove('hidden');
+    
+    if (!oldPin || !newPin) {
+        els.errorChangePin.textContent = "Harap isi kedua kolom!";
+        return;
+    }
+    
+    if (newPin.length < 4) {
+        els.errorChangePin.textContent = "PIN baru minimal 4 angka!";
+        return;
+    }
+    
+    if (oldPin !== state.user.pin) {
+        els.errorChangePin.textContent = "PIN Lama salah!";
+        return;
+    }
+    
+    try {
+        els.errorChangePin.className = "text-yellow-400 text-sm text-center";
+        els.errorChangePin.textContent = "Menyimpan...";
+        
+        // Save to Firebase
+        if (typeof window.firebaseDB !== 'undefined' && typeof window.firebaseSet !== 'undefined') {
+            const pinRef = window.firebaseRef(window.firebaseDB, `appConfig/students/${state.user.class}/${state.user.name}`);
+            await window.firebaseSet(pinRef, newPin);
+            
+            // Update local memory
+            if (appStudentList[state.user.class] && appStudentList[state.user.class][state.user.name]) {
+                appStudentList[state.user.class][state.user.name] = newPin;
+            }
+        }
+        
+        // Update local storage user state
+        state.user.pin = newPin;
+        localStorage.setItem('math_mastery_user', JSON.stringify(state.user));
+        
+        els.errorChangePin.className = "text-green-400 text-sm text-center font-bold";
+        els.errorChangePin.textContent = "PIN Berhasil Diganti!";
+        
+        // Hide banner if exists
+        els.bannerChangePin.classList.add('hidden');
+        
+        setTimeout(() => {
+            hideChangePinModal();
+        }, 1500);
+        
+    } catch(e) {
+        console.error("Gagal ganti PIN", e);
+        els.errorChangePin.className = "text-red-400 text-sm text-center";
+        els.errorChangePin.textContent = "Gagal menghubungi server. Coba lagi.";
+    }
+}
 
 // Start
 init();
