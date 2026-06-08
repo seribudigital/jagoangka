@@ -414,7 +414,7 @@ body {
 .aurora-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(10, 15, 30, 0.76); /* Dark Mode: ~76% overlay to allow aurora to blend beautifully */
+    background: rgba(10, 15, 30, 0.65); /* Dark Mode: ~65% overlay to make the aurora slightly more visible */
     z-index: -1;
     transition: background-color 0.5s ease;
 }
