@@ -639,9 +639,6 @@
   .justify-start {
     justify-content: flex-start;
   }
-  .gap-1\.5 {
-    gap: calc(var(--spacing) * 1.5);
-  }
   .gap-2 {
     gap: calc(var(--spacing) * 2);
   }
@@ -1313,29 +1310,20 @@
   .pt-4 {
     padding-top: calc(var(--spacing) * 4);
   }
-  .pt-6 {
-    padding-top: calc(var(--spacing) * 6);
-  }
   .pt-8 {
     padding-top: calc(var(--spacing) * 8);
   }
   .pt-20 {
     padding-top: calc(var(--spacing) * 20);
   }
-  .pt-\[140px\] {
-    padding-top: 140px;
-  }
-  .pr-1 {
-    padding-right: calc(var(--spacing) * 1);
+  .pt-\[160px\] {
+    padding-top: 160px;
   }
   .pr-2 {
     padding-right: calc(var(--spacing) * 2);
   }
   .pb-2 {
     padding-bottom: calc(var(--spacing) * 2);
-  }
-  .pb-4 {
-    padding-bottom: calc(var(--spacing) * 4);
   }
   .pb-6 {
     padding-bottom: calc(var(--spacing) * 6);
@@ -1345,9 +1333,6 @@
   }
   .pb-24 {
     padding-bottom: calc(var(--spacing) * 24);
-  }
-  .pl-1 {
-    padding-left: calc(var(--spacing) * 1);
   }
   .pl-2 {
     padding-left: calc(var(--spacing) * 2);
@@ -2267,6 +2252,11 @@
       opacity: 50%;
     }
   }
+  .sm\:h-5 {
+    @media (width >= 40rem) {
+      height: calc(var(--spacing) * 5);
+    }
+  }
   .sm\:h-6 {
     @media (width >= 40rem) {
       height: calc(var(--spacing) * 6);
@@ -2275,6 +2265,11 @@
   .sm\:h-10 {
     @media (width >= 40rem) {
       height: calc(var(--spacing) * 10);
+    }
+  }
+  .sm\:w-5 {
+    @media (width >= 40rem) {
+      width: calc(var(--spacing) * 5);
     }
   }
   .sm\:w-6 {
@@ -2292,19 +2287,9 @@
       flex-direction: row;
     }
   }
-  .sm\:gap-2 {
-    @media (width >= 40rem) {
-      gap: calc(var(--spacing) * 2);
-    }
-  }
   .sm\:gap-3 {
     @media (width >= 40rem) {
       gap: calc(var(--spacing) * 3);
-    }
-  }
-  .sm\:gap-4 {
-    @media (width >= 40rem) {
-      gap: calc(var(--spacing) * 4);
     }
   }
   .sm\:p-2 {
@@ -2312,24 +2297,9 @@
       padding: calc(var(--spacing) * 2);
     }
   }
-  .sm\:px-6 {
-    @media (width >= 40rem) {
-      padding-inline: calc(var(--spacing) * 6);
-    }
-  }
-  .sm\:py-5 {
-    @media (width >= 40rem) {
-      padding-block: calc(var(--spacing) * 5);
-    }
-  }
   .sm\:pt-3 {
     @media (width >= 40rem) {
       padding-top: calc(var(--spacing) * 3);
-    }
-  }
-  .sm\:pr-2 {
-    @media (width >= 40rem) {
-      padding-right: calc(var(--spacing) * 2);
     }
   }
   .sm\:text-sm {
@@ -2489,9 +2459,9 @@
       padding-top: calc(var(--spacing) * 4);
     }
   }
-  .md\:pt-40 {
+  .md\:pt-44 {
     @media (width >= 48rem) {
-      padding-top: calc(var(--spacing) * 40);
+      padding-top: calc(var(--spacing) * 44);
     }
   }
   .md\:pb-4 {
