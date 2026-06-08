@@ -819,7 +819,7 @@ function closeRemedialRaport() {
 }
 window.closeRemedialRaport = closeRemedialRaport;
 
-async function showRemedialRaport() {
+async function showRemedialRaport(type = 'integer') {
     if (!state.user.name || !state.user.class) {
         showToast("Error: Identitas siswa tidak ditemukan.", "error");
         return;
@@ -848,13 +848,39 @@ async function showRemedialRaport() {
             exams.push(doc.data());
         });
 
+        // Determine operations to show based on type
+        let targetOps = [];
+        let opTitles = {};
+        let subjectTitle = '';
+        let subjectDesc = '';
+
+        if (type === 'decimal') {
+            targetOps = ['decimal_add', 'decimal_subtract', 'decimal_multiply', 'decimal_divide'];
+            opTitles = {
+                decimal_add: { title: 'Penjumlahan Desimal', color: 'text-brand-accent' },
+                decimal_subtract: { title: 'Pengurangan Desimal', color: 'text-indigo-400' },
+                decimal_multiply: { title: 'Perkalian Desimal', color: 'text-brand-primary' },
+                decimal_divide: { title: 'Pembagian Desimal', color: 'text-brand-secondary' }
+            };
+            subjectTitle = 'Matematika (Bilangan Desimal)';
+            subjectDesc = 'Rekapitulasi nilai hasil ujian remedial untuk operasi Penjumlahan, Pengurangan, Perkalian, dan Pembagian Desimal.';
+        } else {
+            targetOps = ['multiply', 'divide', 'add', 'subtract'];
+            opTitles = {
+                multiply: { title: 'Perkalian', color: 'text-brand-primary' },
+                divide: { title: 'Pembagian', color: 'text-brand-secondary' },
+                add: { title: 'Penjumlahan', color: 'text-brand-accent' },
+                subtract: { title: 'Pengurangan', color: 'text-indigo-400' }
+            };
+            subjectTitle = 'Matematika (Bilangan Bulat)';
+            subjectDesc = 'Rekapitulasi nilai hasil ujian remedial untuk operasi Perkalian, Pembagian, Penjumlahan, dan Pengurangan.';
+        }
+
         // Group operations
-        const ops = {
-            multiply: [],
-            divide: [],
-            add: [],
-            subtract: []
-        };
+        const ops = {};
+        targetOps.forEach(op => {
+            ops[op] = [];
+        });
 
         exams.forEach(ex => {
             const op = ex.tipeOperasi;
@@ -865,7 +891,7 @@ async function showRemedialRaport() {
 
         // Sort each operation by date descending and take top 3
         const resultGroup = {};
-        for (const op in ops) {
+        for (const op of targetOps) {
             ops[op].sort((a, b) => {
                 const timeA = a.tanggal && typeof a.tanggal.toDate === 'function' ? a.tanggal.toDate().getTime() : (a.tanggal ? new Date(a.tanggal).getTime() : 0);
                 const timeB = b.tanggal && typeof b.tanggal.toDate === 'function' ? b.tanggal.toDate().getTime() : (b.tanggal ? new Date(b.tanggal).getTime() : 0);
@@ -879,22 +905,19 @@ async function showRemedialRaport() {
         const classEl = document.getElementById('remedial-raport-class');
         const dateEl = document.getElementById('remedial-raport-date');
         const gridEl = document.getElementById('remedial-raport-grid');
+        const subjectEl = document.getElementById('remedial-raport-subject');
+        const descEl = document.getElementById('remedial-raport-desc');
 
         if (nameEl) nameEl.textContent = name;
         if (classEl) classEl.textContent = className;
         if (dateEl) dateEl.textContent = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        if (subjectEl) subjectEl.textContent = subjectTitle;
+        if (descEl) descEl.textContent = subjectDesc;
 
         if (gridEl) {
             gridEl.innerHTML = '';
             
-            const opTitles = {
-                multiply: { title: 'Perkalian', color: 'text-brand-primary' },
-                divide: { title: 'Pembagian', color: 'text-brand-secondary' },
-                add: { title: 'Penjumlahan', color: 'text-brand-accent' },
-                subtract: { title: 'Pengurangan', color: 'text-indigo-400' }
-            };
-
-            for (const op of ['multiply', 'divide', 'add', 'subtract']) {
+            for (const op of targetOps) {
                 const list = resultGroup[op];
                 const info = opTitles[op];
 
@@ -959,8 +982,12 @@ async function showRemedialRaport() {
             }
         }
 
-        // Close integer select modal
-        closeIntegerSelect();
+        // Close select modal
+        if (type === 'decimal') {
+            closeDecimalSelect();
+        } else {
+            closeIntegerSelect();
+        }
 
         // Show remedial raport screen
         showRemedialRaportScreen();
@@ -2680,6 +2707,14 @@ function selectIntegerOp(op) {
 
 // Decimal Mode Functions
 function showDecimalModeSelect() {
+    const btnRemedialRaportDec = document.getElementById('btn-lihat-raport-remedial-desimal');
+    if (btnRemedialRaportDec) {
+        if (state.appMode === 'remedial') {
+            btnRemedialRaportDec.classList.remove('hidden');
+        } else {
+            btnRemedialRaportDec.classList.add('hidden');
+        }
+    }
     document.getElementById('modal-decimal-select').classList.remove('hidden');
 }
 

@@ -912,6 +912,19 @@
                             <div class="text-sm text-brand-text-muted">Contoh: 7.2 ÷ 0.8 = ?</div>
                         </div>
                     </button>
+
+                    <button id="btn-lihat-raport-remedial-desimal" onclick="showRemedialRaport('decimal')"
+                        class="hidden flex items-center gap-4 bg-brand-surface/50 hover:bg-brand-surface border border-brand-border hover:border-brand-primary/50 rounded-2xl p-4 transition-all text-left group mt-2">
+                        <div class="p-3 bg-brand-primary/20 text-brand-primary rounded-xl group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-bold text-brand-text text-lg font-sans">Lihat Raport Remedial Desimal</div>
+                            <div class="text-sm text-brand-text-muted">Rekapitulasi 12 nilai ujian terakhir remedial desimal.</div>
+                        </div>
+                    </button>
                 </div>
             </div>
         </div>
@@ -1077,8 +1090,8 @@
                         </div>
                         <div>
                             <p class="text-brand-text-muted mb-1 font-sans">Mata Pelajaran</p>
-                            <p class="text-lg font-semibold text-brand-text font-sans">Matematika (Bilangan Bulat)</p>
-                            <p class="text-xs text-brand-text-muted mt-1 leading-relaxed font-sans">Rekapitulasi nilai hasil ujian remedial untuk operasi Perkalian, Pembagian, Penjumlahan, dan Pengurangan.</p>
+                            <p class="text-lg font-semibold text-brand-text font-sans" id="remedial-raport-subject">Matematika (Bilangan Bulat)</p>
+                            <p class="text-xs text-brand-text-muted mt-1 leading-relaxed font-sans" id="remedial-raport-desc">Rekapitulasi nilai hasil ujian remedial untuk operasi Perkalian, Pembagian, Penjumlahan, dan Pengurangan.</p>
                         </div>
                         <div>
                             <p class="text-brand-text-muted mb-1 font-sans">Tanggal Cetak</p>
