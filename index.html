@@ -74,8 +74,6 @@
     <script type="importmap" data-cfasync="false">
       {
         "imports": {
-          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
           "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
           "firebase/analytics": "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js",
           "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
@@ -86,7 +84,13 @@
 
     <!-- Background Elements -->
     <div class="fixed inset-0 pointer-events-none overflow-hidden" style="z-index: -1;">
-        <canvas id="bg-canvas" class="absolute inset-0 w-full h-full"></canvas>
+        <div class="aurora-container absolute inset-0 w-full h-full">
+            <div class="aurora-blob aurora-blob-1"></div>
+            <div class="aurora-blob aurora-blob-2"></div>
+            <div class="aurora-blob aurora-blob-3"></div>
+            <div class="aurora-blob aurora-blob-4"></div>
+        </div>
+        <div class="aurora-overlay absolute inset-0 w-full h-full"></div>
     </div>
 
     <!-- Main Container -->
@@ -264,21 +268,21 @@
                 <!-- Dropdown Mode (Default) -->
                 <div id="login-dropdown-mode">
                     <div class="mb-4">
-                        <label for="select-class" class="block text-sm font-medium text-slate-300 mb-1 ml-1">Kelas</label>
+                        <label for="select-class" class="block text-sm font-medium text-brand-text-muted mb-1 ml-1">Kelas</label>
                         <select id="select-class" required
                             class="w-full bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text outline-none transition-all appearance-none cursor-pointer">
                             <option value="" disabled selected>Memuat daftar kelas...</option>
                         </select>
                     </div>
                     <div>
-                        <label for="select-name" class="block text-sm font-medium text-slate-300 mb-1 ml-1">Nama Lengkap</label>
+                        <label for="select-name" class="block text-sm font-medium text-brand-text-muted mb-1 ml-1">Nama Lengkap</label>
                         <select id="select-name" required disabled
                             class="w-full bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text outline-none transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                             <option value="" disabled selected>Pilih kelas terlebih dahulu</option>
                         </select>
                     </div>
                     <div id="container-pin-dropdown" class="mt-4 hidden animate-fade-in">
-                        <label for="input-pin" class="block text-sm font-medium text-slate-300 mb-1 ml-1">Masukkan PIN</label>
+                        <label for="input-pin" class="block text-sm font-medium text-brand-text-muted mb-1 ml-1">Masukkan PIN</label>
                         <input type="password" id="input-pin" inputmode="numeric" pattern="[0-9]*" placeholder="****"
                             class="w-full text-center tracking-[0.5em] text-xl font-bold bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text placeholder-slate-500 outline-none transition-all">
                         <p id="error-pin" class="text-red-400 text-xs mt-2 text-center hidden font-medium">PIN Salah! Coba lagi.</p>
@@ -293,17 +297,17 @@
                 <!-- Manual Input Mode (Hidden by default) -->
                 <div id="login-manual-mode" class="hidden">
                     <div class="mb-4">
-                        <label for="input-class" class="block text-sm font-medium text-slate-300 mb-1 ml-1">Kelas</label>
+                        <label for="input-class" class="block text-sm font-medium text-brand-text-muted mb-1 ml-1">Kelas</label>
                         <input type="text" id="input-class" placeholder="Contoh: 7A"
                             class="w-full bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text placeholder-slate-500 outline-none transition-all">
                     </div>
                     <div>
-                        <label for="input-name" class="block text-sm font-medium text-slate-300 mb-1 ml-1">Nama Lengkap</label>
+                        <label for="input-name" class="block text-sm font-medium text-brand-text-muted mb-1 ml-1">Nama Lengkap</label>
                         <input type="text" id="input-name" placeholder="Contoh: Budi Santoso"
                             class="w-full bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text placeholder-slate-500 outline-none transition-all">
                     </div>
                     <div class="mt-4">
-                        <label for="input-new-pin" class="block text-sm font-medium text-slate-300 mb-1 ml-1">Buat PIN (Untuk Login Selanjutnya)</label>
+                        <label for="input-new-pin" class="block text-sm font-medium text-brand-text-muted mb-1 ml-1">Buat PIN (Untuk Login Selanjutnya)</label>
                         <input type="password" id="input-new-pin" inputmode="numeric" pattern="[0-9]*" placeholder="Contoh: 1234"
                             class="w-full text-center tracking-[0.5em] text-xl font-bold bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text placeholder-slate-500 outline-none transition-all">
                     </div>
@@ -1200,11 +1204,11 @@
             <h2 class="text-2xl font-bold text-center mb-6">Ganti PIN</h2>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1 ml-1">PIN Lama</label>
+                    <label class="block text-sm font-medium text-brand-text-muted mb-1 ml-1">PIN Lama</label>
                     <input type="password" id="input-old-pin" inputmode="numeric" pattern="[0-9]*" class="w-full text-center tracking-[0.5em] text-xl font-bold bg-brand-dark/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text outline-none">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1 ml-1">PIN Baru</label>
+                    <label class="block text-sm font-medium text-brand-text-muted mb-1 ml-1">PIN Baru</label>
                     <input type="password" id="input-new-pin-change" inputmode="numeric" pattern="[0-9]*" class="w-full text-center tracking-[0.5em] text-xl font-bold bg-brand-dark/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text outline-none">
                 </div>
                 <p id="error-change-pin" class="text-red-400 text-sm text-center hidden"></p>
@@ -1301,7 +1305,6 @@
 
         console.log("Firebase initialized with Firestore + Offline Persistence");
     </script>
-    <script type="module" src="background3d.js?v=2.0" data-cfasync="false"></script>
     <script src="script.js?v=2.0" defer></script>
     <script src="duel.js?v=2.0" defer></script>
 </body>

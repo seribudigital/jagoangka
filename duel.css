@@ -56,3 +56,21 @@
         box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
     }
 }
+
+/* Light mode overrides for Duel Numpad */
+:root.light .duel-btn-numpad {
+    background-color: rgba(255, 255, 255, 0.8) !important;
+    color: #1e293b !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+}
+
+:root.light .duel-btn-numpad:hover {
+    background-color: rgba(241, 245, 249, 0.9) !important;
+    border-color: #94a3b8 !important;
+}
+
+:root.light .duel-btn-numpad:active {
+    background-color: rgba(226, 232, 240, 0.9) !important;
+    transform: scale(0.95) !important;
+}

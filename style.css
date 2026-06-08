@@ -68,11 +68,11 @@
     background-color: var(--overlay-color);
 }
 
-/* Force body background to follow theme variable */
+/* Force body background to be transparent to show Aurora gradient underneath */
 body {
-    background-color: var(--bg-primary) !important;
+    background-color: transparent !important;
     color: var(--text-primary);
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: color 0.3s ease;
 }
 
 /* Custom Styles complementing Tailwind */
@@ -392,6 +392,187 @@ body {
 
 .animate-bounce-custom {
     animation: bounce-custom 0.5s ease-in-out;
+}
+
+
+/* ============================================
+   AURORA GRADIENT BACKGROUND & ANIMATIONS
+   ============================================ */
+.aurora-container {
+    background: #0a0f1d; /* Base Dark Mode Midnight Blue */
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    z-index: -2;
+    transition: background-color 0.5s ease;
+}
+
+:root.light .aurora-container {
+    background: #f1f5f9; /* Base Light Mode Soft Slate */
+}
+
+.aurora-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 15, 30, 0.82); /* Heavy overlay to dim aurora in Dark Mode by ~80% */
+    z-index: -1;
+    transition: background-color 0.5s ease;
+}
+
+:root.light .aurora-overlay {
+    background: rgba(245, 247, 250, 0.85); /* White overlay for soft iOS-style pastel theme */
+}
+
+.aurora-blob {
+    position: absolute;
+    width: 90vmax;
+    height: 90vmax;
+    border-radius: 50%;
+    filter: blur(80px);
+    mix-blend-mode: screen;
+    opacity: 0.3;
+    transition: opacity 0.5s ease, filter 0.5s ease;
+}
+
+:root.light .aurora-blob {
+    mix-blend-mode: multiply; /* Multiplies color on light background for a true pastel look */
+    opacity: 0.22;
+    filter: blur(100px);
+}
+
+/* Blob 1: Midnight Blue/Teal (top-left) */
+.aurora-blob-1 {
+    background: radial-gradient(circle, rgba(14, 116, 144, 0.7) 0%, rgba(30, 41, 59, 0) 70%);
+    top: -30%;
+    left: -20%;
+    animation: aurora-float-1 35s ease-in-out infinite alternate;
+}
+
+/* Blob 2: Deep Purple (bottom-right) */
+.aurora-blob-2 {
+    background: radial-gradient(circle, rgba(124, 58, 237, 0.6) 0%, rgba(76, 29, 149, 0) 70%);
+    bottom: -30%;
+    right: -20%;
+    animation: aurora-float-2 40s ease-in-out infinite alternate;
+}
+
+/* Blob 3: Vibrant Teal (top-right) */
+.aurora-blob-3 {
+    background: radial-gradient(circle, rgba(13, 148, 136, 0.7) 0%, rgba(17, 94, 89, 0) 70%);
+    top: 10%;
+    right: -30%;
+    animation: aurora-float-3 30s ease-in-out infinite alternate;
+}
+
+/* Blob 4: Mint Green (bottom-left) */
+.aurora-blob-4 {
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.55) 0%, rgba(6, 95, 70, 0) 70%);
+    bottom: -10%;
+    left: -30%;
+    animation: aurora-float-4 35s ease-in-out infinite alternate;
+}
+
+/* Light Mode radial gradients (softer tones that match iOS/macOS styles) */
+:root.light .aurora-blob-1 {
+    background: radial-gradient(circle, rgba(6, 182, 212, 0.4) 0%, rgba(255, 255, 255, 0) 70%);
+}
+
+:root.light .aurora-blob-2 {
+    background: radial-gradient(circle, rgba(167, 139, 250, 0.35) 0%, rgba(255, 255, 255, 0) 70%);
+}
+
+:root.light .aurora-blob-3 {
+    background: radial-gradient(circle, rgba(20, 184, 166, 0.35) 0%, rgba(255, 255, 255, 0) 70%);
+}
+
+:root.light .aurora-blob-4 {
+    background: radial-gradient(circle, rgba(52, 211, 153, 0.3) 0%, rgba(255, 255, 255, 0) 70%);
+}
+
+/* Aurora Motion Keyframes */
+@keyframes aurora-float-1 {
+    0% {
+        transform: translate(0, 0) rotate(0deg) scale(1);
+    }
+    50% {
+        transform: translate(10%, 15%) rotate(120deg) scale(1.1);
+    }
+    100% {
+        transform: translate(-5%, -5%) rotate(240deg) scale(0.95);
+    }
+}
+
+@keyframes aurora-float-2 {
+    0% {
+        transform: translate(0, 0) rotate(0deg) scale(1.05);
+    }
+    50% {
+        transform: translate(-10%, -10%) rotate(-120deg) scale(0.95);
+    }
+    100% {
+        transform: translate(5%, 5%) rotate(-240deg) scale(1.05);
+    }
+}
+
+@keyframes aurora-float-3 {
+    0% {
+        transform: translate(0, 0) rotate(0deg) scale(0.95);
+    }
+    50% {
+        transform: translate(-15%, 10%) rotate(180deg) scale(1.1);
+    }
+    100% {
+        transform: translate(10%, -5%) rotate(360deg) scale(0.9);
+    }
+}
+
+@keyframes aurora-float-4 {
+    0% {
+        transform: translate(0, 0) rotate(0deg) scale(1);
+    }
+    50% {
+        transform: translate(15%, -15%) rotate(-90deg) scale(1.15);
+    }
+    100% {
+        transform: translate(-10%, 10%) rotate(-180deg) scale(0.9);
+    }
+}
+
+/* ============================================
+   LIGHT MODE CONTRAST OVERRIDES & ADJUSTMENTS
+   ============================================ */
+/* Keypad / Numpad keys in Light Mode */
+:root.light .btn-numpad {
+    background-color: rgba(255, 255, 255, 0.8) !important;
+    color: #1e293b !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+}
+
+:root.light .btn-numpad:hover {
+    background-color: rgba(241, 245, 249, 0.9) !important;
+    border-color: #94a3b8 !important;
+}
+
+:root.light .btn-numpad:active {
+    background-color: rgba(226, 232, 240, 0.9) !important;
+    transform: scale(0.95) !important;
+}
+
+/* Input Display container in Light Mode */
+:root.light #input-display-container {
+    background-color: rgba(255, 255, 255, 0.7) !important;
+    border-color: #cbd5e1 !important;
+}
+
+/* Neon animated border contrast in Light Mode */
+:root.light .animated-border::before {
+    background: conic-gradient(from var(--angle), transparent 70%, #6366f1) !important;
+}
+
+/* Latest result highlight card in Light Mode */
+:root.light #latest-result {
+    background: linear-gradient(135deg, var(--bg-surface), var(--bg-primary)) !important;
 }
 
 /* ============================================

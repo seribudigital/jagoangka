@@ -766,6 +766,12 @@ function updateDashboardRecommendation() {
 
     if (!hintContainer || !hintText) return;
 
+    // Sembunyikan rekomendasi jika tidak berada di mode pemantauan
+    if (state.appMode !== 'pemantauan') {
+        hintContainer.classList.add('hidden');
+        return;
+    }
+
     // Find mode with most weaknesses
     let maxWeakness = 0;
     let worstMode = null;
@@ -1790,9 +1796,9 @@ function renderLeaderboardItem(data, rank) {
     const listEl = els.leaderboardList;
 
     // Style for Top 3
-    let rankBadge = `<div class="w-8 h-8 rounded-full bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-sm text-center">${rank}</div>`;
-    let rowBg = 'bg-slate-800/30';
-    let border = 'border-slate-800';
+    let rankBadge = `<div class="w-8 h-8 rounded-full bg-brand-surface border border-brand-border text-brand-text-muted flex items-center justify-center font-bold text-sm text-center">${rank}</div>`;
+    let rowBg = 'bg-brand-surface/40';
+    let border = 'border-brand-border/50';
     let scaleEffect = 'hover:scale-[1.01]';
     let icon = '';
 
@@ -1835,12 +1841,12 @@ function renderLeaderboardItem(data, rank) {
     item.innerHTML = `
         <div class="mr-4">${rankBadge}</div>
         <div class="flex-1">
-            <div class="font-bold text-white text-lg truncate">${data.nama}</div>
-            <div class="text-xs text-slate-400 font-mono">${data.kelasRaw || data.kelasKategori} • ${data.tipeOperasi.toUpperCase()}</div>
+            <div class="font-bold text-brand-text text-lg truncate">${data.nama}</div>
+            <div class="text-xs text-brand-text-muted font-mono">${data.kelasRaw || data.kelasKategori} • ${data.tipeOperasi.toUpperCase()}</div>
         </div>
         <div class="text-right">
             <div class="font-bold text-brand-primary text-xl">${data.skor}</div>
-            <div class="text-xs text-slate-500">${data.waktuRataRata.toFixed(2)}s / soal</div>
+            <div class="text-xs text-brand-text-muted">${data.waktuRataRata.toFixed(2)}s / soal</div>
         </div>
     `;
 
@@ -2081,20 +2087,20 @@ function renderHistory() {
         let normalizedScore = Math.round((item.score / maxScore) * 100);
 
         const el = document.createElement('div');
-        el.className = 'bg-brand-surface/40 border border-slate-700/50 rounded-xl p-4 flex justify-between items-center animate-fade-in';
+        el.className = 'bg-brand-surface/40 border border-brand-border/50 rounded-xl p-4 flex justify-between items-center animate-fade-in';
         el.innerHTML = `
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-slate-900 ${normalizedScore >= 80 ? 'bg-brand-accent' : normalizedScore >= 60 ? 'bg-brand-primary' : 'bg-slate-500'}">
                     ${getGrade(item.score, maxScore).charAt(0)}
                 </div>
                 <div>
-                    <div class="font-bold text-white text-sm">${modeLabel} <span class="text-xs font-normal text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full ml-1 border border-slate-700">${typeLabel}</span></div>
-                    <div class="text-xs text-slate-400">${date}</div>
+                    <div class="font-bold text-brand-text text-sm">${modeLabel} <span class="text-xs font-normal text-brand-text-muted bg-brand-surface px-2 py-0.5 rounded-full ml-1 border border-brand-border">${typeLabel}</span></div>
+                    <div class="text-xs text-brand-text-muted">${date}</div>
                 </div>
             </div>
             <div class="text-right">
-                <div class="font-bold text-white">${item.score} <span class="text-xs font-normal text-slate-500">/${maxScore}</span></div>
-                <div class="text-xs text-slate-500">${formatDuration(item.duration)}</div>
+                <div class="font-bold text-brand-text">${item.score} <span class="text-xs font-normal text-brand-text-muted">/${maxScore}</span></div>
+                <div class="text-xs text-brand-text-muted">${formatDuration(item.duration)}</div>
             </div>
         `;
         els.historyList.appendChild(el);
