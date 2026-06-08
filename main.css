@@ -2595,9 +2595,9 @@ html {
   background-color: var(--bg-primary);
 }
 body {
-  background-color: var(--bg-primary) !important;
+  background-color: transparent !important;
   color: var(--text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: color 0.3s ease;
 }
 .btn-numpad {
   border-radius: var(--radius-2xl);

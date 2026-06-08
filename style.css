@@ -73,10 +73,11 @@ html {
     background-color: var(--bg-primary);
 }
 
+/* Force body background to be transparent to show Aurora gradient underneath */
 body {
-    background-color: var(--bg-primary) !important;
+    background-color: transparent !important;
     color: var(--text-primary);
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: color 0.3s ease;
 }
 
 /* Custom Styles complementing Tailwind */
