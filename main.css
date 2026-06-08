@@ -2591,10 +2591,13 @@
 .bg-brand-overlay {
   background-color: var(--overlay-color);
 }
+html {
+  background-color: var(--bg-primary);
+}
 body {
-  background-color: transparent !important;
+  background-color: var(--bg-primary) !important;
   color: var(--text-primary);
-  transition: color 0.3s ease;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 .btn-numpad {
   border-radius: var(--radius-2xl);

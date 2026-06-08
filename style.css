@@ -68,11 +68,15 @@
     background-color: var(--overlay-color);
 }
 
-/* Force body background to be transparent to show Aurora gradient underneath */
+/* Fallback background matching themes to prevent white flashing on mobile scroll */
+html {
+    background-color: var(--bg-primary);
+}
+
 body {
-    background-color: transparent !important;
+    background-color: var(--bg-primary) !important;
     color: var(--text-primary);
-    transition: color 0.3s ease;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Custom Styles complementing Tailwind */
