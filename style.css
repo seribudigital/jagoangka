@@ -586,12 +586,12 @@ body {
     header,
     #badge-toast,
     #toast,
-    .fixed:not(#screen-raport) {
+    .fixed:not(#screen-raport):not(#screen-remedial-raport) {
         display: none !important;
     }
 
-    /* Hide everything inside main except #screen-raport */
-    main > *:not(#screen-raport) {
+    /* Hide everything inside main except the shown report */
+    main > *:not(#screen-raport):not(#screen-remedial-raport) {
         display: none !important;
     }
 
@@ -616,8 +616,9 @@ body {
         max-width: 100% !important;
     }
 
-    /* Force show #screen-raport (overrides Tailwind .hidden) */
-    #screen-raport {
+    /* Force show the active report screen (overrides Tailwind .hidden) */
+    #screen-raport:not(.hidden),
+    #screen-remedial-raport:not(.hidden) {
         display: block !important;
         position: static !important;
         overflow: visible !important;
@@ -631,12 +632,15 @@ body {
 
     /* Hide the action buttons (download + close) */
     #screen-raport > div.fixed,
-    #screen-raport > div:last-child:not(#raport-content) {
+    #screen-raport > div:last-child:not(#raport-content),
+    #screen-remedial-raport > div.fixed,
+    #screen-remedial-raport > div:last-child:not(#remedial-raport-content) {
         display: none !important;
     }
 
     /* Reset the rapor card */
-    #raport-content {
+    #raport-content,
+    #remedial-raport-content {
         position: static !important;
         max-width: 100% !important;
         max-height: none !important;
@@ -650,41 +654,48 @@ body {
 
     /* ---- COMPACT SIZING to fit 1 page ---- */
     /* Reduce internal padding */
-    #raport-content > div:nth-child(2) {
+    #raport-content > div:nth-child(2),
+    #remedial-raport-content > div:nth-child(2) {
         padding: 16px !important;
     }
 
     /* Smaller heading */
-    #raport-content h1 {
+    #raport-content h1,
+    #remedial-raport-content h1 {
         font-size: 1.25rem !important;
         margin-bottom: 4px !important;
     }
 
     /* Smaller sub-labels */
-    #raport-content p {
+    #raport-content p,
+    #remedial-raport-content p {
         margin-bottom: 2px !important;
     }
 
     /* Compact grid gaps */
-    #raport-content .grid {
+    #raport-content .grid,
+    #remedial-raport-content .grid {
         gap: 8px !important;
         margin-bottom: 12px !important;
     }
 
     /* Compact header row */
-    #raport-content .flex.justify-between {
+    #raport-content .flex.justify-between,
+    #remedial-raport-content .flex.justify-between {
         margin-bottom: 12px !important;
         padding-bottom: 8px !important;
     }
 
     /* Smaller logo */
-    #raport-content img {
+    #raport-content img,
+    #remedial-raport-content img {
         width: 40px !important;
         height: 40px !important;
     }
 
     /* Compact section headings */
-    #raport-content h3 {
+    #raport-content h3,
+    #remedial-raport-content h3 {
         font-size: 0.7rem !important;
         margin-bottom: 6px !important;
         padding-bottom: 4px !important;
@@ -692,12 +703,15 @@ body {
 
     /* Compact table */
     #raport-content th,
-    #raport-content td {
+    #raport-content td,
+    #remedial-raport-content th,
+    #remedial-raport-content td {
         padding: 4px 8px !important;
         font-size: 0.75rem !important;
     }
 
-    #raport-content .mb-8 {
+    #raport-content .mb-8,
+    #remedial-raport-content .mb-8 {
         margin-bottom: 10px !important;
     }
 
@@ -714,53 +728,65 @@ body {
     }
 
     /* Compact motivation box */
-    #raport-content [class*="bg-brand-dark"][class*="rounded-lg"] {
+    #raport-content [class*="bg-brand-dark"][class*="rounded-lg"],
+    #remedial-raport-content [class*="bg-brand-dark"][class*="rounded-lg"] {
         padding: 8px !important;
         margin-bottom: 8px !important;
     }
 
-    #raport-content [class*="bg-brand-dark"][class*="rounded-lg"] .text-4xl {
+    #raport-content [class*="bg-brand-dark"][class*="rounded-lg"] .text-4xl,
+    #remedial-raport-content [class*="bg-brand-dark"][class*="rounded-lg"] .text-4xl {
         font-size: 1.5rem !important;
     }
 
-    #raport-content [class*="bg-brand-dark"][class*="rounded-lg"] h4 {
+    #raport-content [class*="bg-brand-dark"][class*="rounded-lg"] h4,
+    #remedial-raport-content [class*="bg-brand-dark"][class*="rounded-lg"] h4 {
         font-size: 0.85rem !important;
         margin-bottom: 2px !important;
     }
 
-    #raport-content [class*="bg-brand-dark"][class*="rounded-lg"] p {
+    #raport-content [class*="bg-brand-dark"][class*="rounded-lg"] p,
+    #remedial-raport-content [class*="bg-brand-dark"][class*="rounded-lg"] p {
         font-size: 0.75rem !important;
     }
 
     /* Compact signature area */
-    #raport-content .text-center.pt-8 {
+    #raport-content .text-center.pt-8,
+    #remedial-raport-content .text-center.pt-8 {
         padding-top: 8px !important;
     }
 
-    #raport-content .h-16.w-32 {
+    #raport-content .h-16.w-32,
+    #remedial-raport-content .h-16.w-32 {
         height: 28px !important;
     }
 
     /* General font size reduction */
-    #raport-content .text-xl {
+    #raport-content .text-xl,
+    #remedial-raport-content .text-xl {
         font-size: 0.95rem !important;
     }
 
-    #raport-content .text-lg {
+    #raport-content .text-lg,
+    #remedial-raport-content .text-lg {
         font-size: 0.85rem !important;
     }
 
-    #raport-content .text-sm {
+    #raport-content .text-sm,
+    #remedial-raport-content .text-sm {
         font-size: 0.7rem !important;
     }
 
-    #raport-content .text-xs {
+    #raport-content .text-xs,
+    #remedial-raport-content .text-xs {
         font-size: 0.6rem !important;
     }
 
     /* White background, dark text for print */
     #raport-content,
-    #raport-content * {
+    #raport-content *,
+    #remedial-raport-content,
+    #remedial-raport-content * {
         color: #1e293b !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
@@ -770,19 +796,27 @@ body {
     #raport-content .text-brand-text-muted,
     #raport-content [class*="text-brand-text-muted"],
     #raport-content [class*="text-slate-400"],
-    #raport-content [class*="text-slate-500"] {
+    #raport-content [class*="text-slate-500"],
+    #remedial-raport-content .text-brand-text-muted,
+    #remedial-raport-content [class*="text-brand-text-muted"],
+    #remedial-raport-content [class*="text-slate-400"],
+    #remedial-raport-content [class*="text-slate-500"] {
         color: #64748b !important;
     }
 
     /* Primary color text (scores) */
     #raport-content .text-brand-primary,
-    #raport-content [class*="text-brand-primary"] {
+    #raport-content [class*="text-brand-primary"],
+    #remedial-raport-content .text-brand-primary,
+    #remedial-raport-content [class*="text-brand-primary"] {
         color: #4f46e5 !important;
     }
 
     /* Decorative gradient bars */
     #raport-content > div:first-child,
-    #raport-content > div:last-child {
+    #raport-content > div:last-child,
+    #remedial-raport-content > div:first-child,
+    #remedial-raport-content > div:last-child {
         height: 4px !important;
         background: linear-gradient(to right, #4f46e5, #06b6d4) !important;
         position: static !important;
@@ -791,32 +825,41 @@ body {
     /* Dark background → light gray for print */
     #raport-content [class*="bg-brand-dark"],
     #raport-content [class*="bg-slate-900"],
-    #raport-content thead tr {
+    #raport-content thead tr,
+    #remedial-raport-content [class*="bg-brand-dark"],
+    #remedial-raport-content [class*="bg-slate-900"],
+    #remedial-raport-content thead tr {
         background-color: #f1f5f9 !important;
     }
 
-    #raport-content [class*="bg-brand-surface"] {
+    #raport-content [class*="bg-brand-surface"],
+    #remedial-raport-content [class*="bg-brand-surface"] {
         background-color: white !important;
     }
 
     /* Table styling */
-    #raport-content table {
+    #raport-content table,
+    #remedial-raport-content table {
         border-collapse: collapse !important;
         width: 100% !important;
     }
 
     #raport-content th,
-    #raport-content td {
+    #raport-content td,
+    #remedial-raport-content th,
+    #remedial-raport-content td {
         border: 1px solid #e2e8f0 !important;
         padding: 8px 12px !important;
     }
 
-    #raport-content thead tr th {
+    #raport-content thead tr th,
+    #remedial-raport-content thead tr th {
         color: #475569 !important;
         font-weight: 600 !important;
     }
 
-    #raport-content tfoot tr {
+    #raport-content tfoot tr,
+    #remedial-raport-content tfoot tr {
         background-color: #f1f5f9 !important;
         border-top: 2px solid #cbd5e1 !important;
     }
@@ -824,7 +867,10 @@ body {
     /* Border colors */
     #raport-content [class*="border-brand-border"],
     #raport-content [class*="border-b"],
-    #raport-content [class*="border-t"] {
+    #raport-content [class*="border-t"],
+    #remedial-raport-content [class*="border-brand-border"],
+    #remedial-raport-content [class*="border-b"],
+    #remedial-raport-content [class*="border-t"] {
         border-color: #e2e8f0 !important;
     }
 
@@ -849,13 +895,15 @@ body {
     }
 
     /* Motivation box */
-    #raport-content [class*="bg-brand-dark"][class*="rounded-lg"] {
+    #raport-content [class*="bg-brand-dark"][class*="rounded-lg"],
+    #remedial-raport-content [class*="bg-brand-dark"][class*="rounded-lg"] {
         background-color: #f8fafc !important;
         border: 1px solid #e2e8f0 !important;
     }
 
     /* Logo should print */
-    #raport-content img {
+    #raport-content img,
+    #remedial-raport-content img {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
@@ -875,7 +923,11 @@ body {
     #raport-content .grid,
     #raport-content table,
     #raport-content [class*="rounded-lg"],
-    #raport-content .flex {
+    #raport-content .flex,
+    #remedial-raport-content .grid,
+    #remedial-raport-content table,
+    #remedial-raport-content [class*="rounded-lg"],
+    #remedial-raport-content .flex {
         break-inside: avoid !important;
     }
 }

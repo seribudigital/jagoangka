@@ -96,6 +96,7 @@ const screens = {
     results: document.getElementById('screen-results'),
     modalMode: document.getElementById('modal-mode-select'),
     raport: document.getElementById('screen-raport'),
+    remedialRaport: document.getElementById('screen-remedial-raport'),
     modeSelection: document.getElementById('screen-mode-selection')
 };
 
@@ -808,6 +809,170 @@ function downloadRaportPDF() {
     window.print();
 }
 window.downloadRaportPDF = downloadRaportPDF;
+
+function showRemedialRaportScreen() {
+    screens.remedialRaport.classList.remove('hidden');
+}
+
+function closeRemedialRaport() {
+    screens.remedialRaport.classList.add('hidden');
+}
+window.closeRemedialRaport = closeRemedialRaport;
+
+async function showRemedialRaport() {
+    if (!state.user.name || !state.user.class) {
+        showToast("Error: Identitas siswa tidak ditemukan.", "error");
+        return;
+    }
+
+    showToast("Mengambil data ujian remedial...", "info");
+
+    try {
+        const name = state.user.name;
+        const className = state.user.class;
+
+        if (!window.firebaseDb) {
+            throw new Error("Firebase tidak terinisialisasi.");
+        }
+
+        const collectionRef = window.firebaseCollection(window.firebaseDb, 'remedial_exams');
+        const q = window.firebaseQuery(
+            collectionRef,
+            window.firebaseWhere("nama", "==", name),
+            window.firebaseWhere("kelasRaw", "==", className)
+        );
+
+        const querySnapshot = await window.firebaseGetDocs(q);
+        const exams = [];
+        querySnapshot.forEach(doc => {
+            exams.push(doc.data());
+        });
+
+        // Group operations
+        const ops = {
+            multiply: [],
+            divide: [],
+            add: [],
+            subtract: []
+        };
+
+        exams.forEach(ex => {
+            const op = ex.tipeOperasi;
+            if (ops[op] !== undefined) {
+                ops[op].push(ex);
+            }
+        });
+
+        // Sort each operation by date descending and take top 3
+        const resultGroup = {};
+        for (const op in ops) {
+            ops[op].sort((a, b) => {
+                const timeA = a.tanggal && typeof a.tanggal.toDate === 'function' ? a.tanggal.toDate().getTime() : (a.tanggal ? new Date(a.tanggal).getTime() : 0);
+                const timeB = b.tanggal && typeof b.tanggal.toDate === 'function' ? b.tanggal.toDate().getTime() : (b.tanggal ? new Date(b.tanggal).getTime() : 0);
+                return timeB - timeA;
+            });
+            resultGroup[op] = ops[op].slice(0, 3);
+        }
+
+        // Render to UI
+        const nameEl = document.getElementById('remedial-raport-name');
+        const classEl = document.getElementById('remedial-raport-class');
+        const dateEl = document.getElementById('remedial-raport-date');
+        const gridEl = document.getElementById('remedial-raport-grid');
+
+        if (nameEl) nameEl.textContent = name;
+        if (classEl) classEl.textContent = className;
+        if (dateEl) dateEl.textContent = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+
+        if (gridEl) {
+            gridEl.innerHTML = '';
+            
+            const opTitles = {
+                multiply: { title: 'Perkalian', color: 'text-brand-primary' },
+                divide: { title: 'Pembagian', color: 'text-brand-secondary' },
+                add: { title: 'Penjumlahan', color: 'text-brand-accent' },
+                subtract: { title: 'Pengurangan', color: 'text-indigo-400' }
+            };
+
+            for (const op of ['multiply', 'divide', 'add', 'subtract']) {
+                const list = resultGroup[op];
+                const info = opTitles[op];
+
+                const card = document.createElement('div');
+                card.className = "bg-brand-dark/40 border border-brand-border rounded-xl p-5 flex flex-col gap-3 min-h-[160px]";
+                
+                let contentHTML = `
+                    <h4 class="font-bold text-brand-text border-b border-brand-border/50 pb-2 flex items-center justify-between">
+                        <span>${info.title}</span>
+                        <span class="text-xs ${info.color} font-bold uppercase tracking-wider">3 Terakhir</span>
+                    </h4>
+                `;
+
+                if (list.length === 0) {
+                    contentHTML += `
+                        <div class="flex-1 flex items-center justify-center py-6">
+                            <p class="text-brand-text-muted text-sm italic">Belum ada riwayat ujian</p>
+                        </div>
+                    `;
+                } else {
+                    contentHTML += `
+                        <table class="w-full text-xs text-left border-collapse">
+                            <thead>
+                                <tr class="text-brand-text-muted border-b border-brand-border/30 uppercase tracking-wider font-semibold">
+                                    <th class="py-2">Tanggal</th>
+                                    <th class="py-2">Waktu Rerata</th>
+                                    <th class="py-2 text-right">Nilai</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-brand-text font-medium">
+                    `;
+
+                    list.forEach(ex => {
+                        const dateStr = ex.tanggal && typeof ex.tanggal.toDate === 'function' 
+                            ? ex.tanggal.toDate().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' }) 
+                            : (ex.tanggal ? new Date(ex.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' }) : '-');
+                        
+                        let normalizedScore = ex.skor;
+                        if (normalizedScore > 100) {
+                            normalizedScore = Math.round(normalizedScore / 5);
+                        }
+                        
+                        const avgTimeStr = ex.waktuRataRata ? `${parseFloat(ex.waktuRataRata).toFixed(1)}s` : '-';
+
+                        contentHTML += `
+                            <tr class="border-b border-brand-border/20 last:border-0 hover:bg-brand-surface/30">
+                                <td class="py-2">${dateStr}</td>
+                                <td class="py-2">${avgTimeStr}</td>
+                                <td class="py-2 text-right font-bold ${info.color}">${normalizedScore}</td>
+                            </tr>
+                        `;
+                    });
+
+                    contentHTML += `
+                            </tbody>
+                        </table>
+                    `;
+                }
+
+                card.innerHTML = contentHTML;
+                gridEl.appendChild(card);
+            }
+        }
+
+        // Close integer select modal
+        closeIntegerSelect();
+
+        // Show remedial raport screen
+        showRemedialRaportScreen();
+        
+        showToast("Raport remedial berhasil dimuat!", "success");
+
+    } catch (error) {
+        console.error("Gagal memuat raport remedial:", error);
+        showToast("Gagal mengambil data dari server.", "error");
+    }
+}
+window.showRemedialRaport = showRemedialRaport;
 
 function showLeaderboardScreen() {
     hideAllScreens();
@@ -2493,6 +2658,14 @@ function renderActivityChart() {
 
 // Integer Mode Functions
 function showIntegerModeSelect() {
+    const btnRemedialRaport = document.getElementById('btn-lihat-raport-remedial');
+    if (btnRemedialRaport) {
+        if (state.appMode === 'remedial') {
+            btnRemedialRaport.classList.remove('hidden');
+        } else {
+            btnRemedialRaport.classList.add('hidden');
+        }
+    }
     document.getElementById('modal-integer-select').classList.remove('hidden');
 }
 
