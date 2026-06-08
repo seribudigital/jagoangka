@@ -553,8 +553,38 @@ function saveUser(name, className, pin) {
     updateGreeting();
 }
 
+function getInitials(name) {
+    if (!name) return '--';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    if (parts.length === 1 && parts[0].length > 0) {
+        return parts[0].substring(0, Math.min(2, parts[0].length)).toUpperCase();
+    }
+    return '--';
+}
+
 function updateGreeting() {
-    els.greeting.textContent = `Halo, ${state.user.name} - ${state.user.class}`;
+    const name = state.user.name || 'Siswa';
+    const className = state.user.class || '';
+    const greetingText = className ? `Halo, ${name} - ${className}` : `Halo, ${name}`;
+    
+    // Update all greeting placeholders
+    if (els.greeting) els.greeting.textContent = greetingText;
+    
+    const greetingMobileMode = document.getElementById('user-greeting-mobile-mode');
+    if (greetingMobileMode) greetingMobileMode.textContent = greetingText;
+    
+    const greetingMobileMenu = document.getElementById('user-greeting-mobile-menu');
+    if (greetingMobileMenu) greetingMobileMenu.textContent = greetingText;
+    
+    // Update avatar initials
+    const initials = getInitials(state.user.name);
+    const avatars = document.querySelectorAll('.user-avatar');
+    avatars.forEach(avatar => {
+        avatar.textContent = initials;
+    });
 }
 
 /**

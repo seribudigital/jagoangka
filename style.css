@@ -932,9 +932,23 @@ body {
     }
 }
 
+/* Glassmorphism Header */
+.glass-header {
+    background: rgba(15, 23, 42, 0.35); /* thin slate dark */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+:root.light .glass-header {
+    background: rgba(232, 237, 245, 0.45); /* thin slate light */
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
 /* Custom Utility Button Sizing & Glow effect */
 .btn-utility {
-    padding: 6px;
+    width: 40px;
+    height: 40px;
     background: var(--bg-surface);
     border: 1px solid var(--border-color);
     color: var(--text-primary);
@@ -950,18 +964,19 @@ body {
 }
 
 .btn-utility svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     transition: stroke 0.2s ease, fill 0.2s ease;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
     .btn-utility {
-        padding: 8px;
+        width: 36px;
+        height: 36px;
     }
     .btn-utility svg {
-        width: 20px;
-        height: 20px;
+        width: 16px;
+        height: 16px;
     }
 }
 
