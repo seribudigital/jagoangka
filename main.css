@@ -33,6 +33,7 @@
     --color-pink-500: oklch(65.6% 0.241 354.308);
     --color-rose-400: oklch(71.2% 0.194 13.428);
     --color-rose-500: oklch(64.5% 0.246 16.439);
+    --color-rose-600: oklch(58.6% 0.253 17.585);
     --color-slate-100: oklch(96.8% 0.007 247.896);
     --color-slate-300: oklch(86.9% 0.022 252.894);
     --color-slate-400: oklch(70.4% 0.04 256.788);
@@ -1041,12 +1042,6 @@
       background-color: color-mix(in oklab, var(--color-pink-500) 20%, transparent);
     }
   }
-  .bg-purple-500\/10 {
-    background-color: color-mix(in srgb, oklch(62.7% 0.265 303.9) 10%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-purple-500) 10%, transparent);
-    }
-  }
   .bg-red-500 {
     background-color: var(--color-red-500);
   }
@@ -1187,8 +1182,8 @@
     --tw-gradient-from: var(--color-orange-500);
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
   }
-  .from-purple-500 {
-    --tw-gradient-from: var(--color-purple-500);
+  .from-red-500 {
+    --tw-gradient-from: var(--color-red-500);
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
   }
   .from-rose-500 {
@@ -1244,6 +1239,10 @@
   }
   .to-red-600 {
     --tw-gradient-to: var(--color-red-600);
+    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+  }
+  .to-rose-600 {
+    --tw-gradient-to: var(--color-rose-600);
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
   }
   .to-slate-900 {
@@ -1638,16 +1637,16 @@
       --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-orange-500) 30%, transparent) var(--tw-shadow-alpha), transparent);
     }
   }
-  .shadow-purple-500\/30 {
-    --tw-shadow-color: color-mix(in srgb, oklch(62.7% 0.265 303.9) 30%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-purple-500) 30%, transparent) var(--tw-shadow-alpha), transparent);
-    }
-  }
   .shadow-red-500\/25 {
     --tw-shadow-color: color-mix(in srgb, oklch(63.7% 0.237 25.331) 25%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-red-500) 25%, transparent) var(--tw-shadow-alpha), transparent);
+    }
+  }
+  .shadow-red-500\/30 {
+    --tw-shadow-color: color-mix(in srgb, oklch(63.7% 0.237 25.331) 30%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-red-500) 30%, transparent) var(--tw-shadow-alpha), transparent);
     }
   }
   .shadow-rose-500\/30 {
@@ -1793,12 +1792,12 @@
       }
     }
   }
-  .group-hover\:bg-purple-500\/20 {
+  .group-hover\:bg-red-500\/20 {
     &:is(:where(.group):hover *) {
       @media (hover: hover) {
-        background-color: color-mix(in srgb, oklch(62.7% 0.265 303.9) 20%, transparent);
+        background-color: color-mix(in srgb, oklch(63.7% 0.237 25.331) 20%, transparent);
         @supports (color: color-mix(in lab, red, red)) {
-          background-color: color-mix(in oklab, var(--color-purple-500) 20%, transparent);
+          background-color: color-mix(in oklab, var(--color-red-500) 20%, transparent);
         }
       }
     }
@@ -2201,12 +2200,12 @@
       }
     }
   }
-  .hover\:shadow-purple-500\/20 {
+  .hover\:shadow-red-500\/20 {
     &:hover {
       @media (hover: hover) {
-        --tw-shadow-color: color-mix(in srgb, oklch(62.7% 0.265 303.9) 20%, transparent);
+        --tw-shadow-color: color-mix(in srgb, oklch(63.7% 0.237 25.331) 20%, transparent);
         @supports (color: color-mix(in lab, red, red)) {
-          --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-purple-500) 20%, transparent) var(--tw-shadow-alpha), transparent);
+          --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-red-500) 20%, transparent) var(--tw-shadow-alpha), transparent);
         }
       }
     }
