@@ -450,7 +450,7 @@ body {
     background: radial-gradient(circle, rgba(6, 182, 212, 0.95) 0%, rgba(6, 182, 212, 0) 70%);
     top: -30%;
     left: -20%;
-    animation: aurora-float-1 35s ease-in-out infinite alternate;
+    animation: aurora-float-1 16s ease-in-out infinite alternate;
 }
 
 /* Blob 2: Deep Purple (bottom-right) */
@@ -458,7 +458,7 @@ body {
     background: radial-gradient(circle, rgba(168, 85, 247, 0.95) 0%, rgba(168, 85, 247, 0) 70%);
     bottom: -30%;
     right: -20%;
-    animation: aurora-float-2 40s ease-in-out infinite alternate;
+    animation: aurora-float-2 20s ease-in-out infinite alternate;
 }
 
 /* Blob 3: Vibrant Teal (top-right) */
@@ -466,7 +466,7 @@ body {
     background: radial-gradient(circle, rgba(20, 184, 166, 0.95) 0%, rgba(20, 184, 166, 0) 70%);
     top: 10%;
     right: -30%;
-    animation: aurora-float-3 30s ease-in-out infinite alternate;
+    animation: aurora-float-3 12s ease-in-out infinite alternate;
 }
 
 /* Blob 4: Mint Green (bottom-left) */
@@ -474,7 +474,7 @@ body {
     background: radial-gradient(circle, rgba(52, 211, 153, 0.9) 0%, rgba(52, 211, 153, 0) 70%);
     bottom: -10%;
     left: -30%;
-    animation: aurora-float-4 35s ease-in-out infinite alternate;
+    animation: aurora-float-4 15s ease-in-out infinite alternate;
 }
 
 /* Light Mode radial gradients (softer tones that match iOS/macOS styles) */
