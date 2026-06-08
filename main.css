@@ -3330,14 +3330,33 @@ body {
   }
 }
 .glass-header {
-  background: rgba(15, 23, 42, 0.35);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 :root.light .glass-header {
-  background: rgba(232, 237, 245, 0.45);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  background: rgba(232, 237, 245, 0.95);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+@media (min-width: 768px) {
+  .glass-header {
+    background: rgba(15, 23, 42, 0.35);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  :root.light .glass-header {
+    background: rgba(232, 237, 245, 0.45);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+}
+.user-avatar {
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
 }
 .btn-utility {
   width: 40px;
