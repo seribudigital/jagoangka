@@ -1369,7 +1369,9 @@
         import { initializeApp } from "firebase/app";
         import { getAnalytics } from "firebase/analytics";
         import {
-            getFirestore,
+            initializeFirestore,
+            persistentLocalCache,
+            persistentMultipleTabManager,
             collection,
             addDoc,
             query,
@@ -1378,8 +1380,7 @@
             limit,
             getDocs,
             startAfter,
-            Timestamp,
-            enableIndexedDbPersistence
+            Timestamp
         } from "firebase/firestore";
 
         // Import Realtime Database functions
@@ -1409,16 +1410,11 @@
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
-        const db = getFirestore(app);
-
-        // Enable offline persistence (IndexedDB cache)
-        // Data yang sudah pernah diambil akan disimpan lokal, mengurangi Reads ke 0 untuk revisit
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Persistence gagal: Ada tab lain yang terbuka');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Persistence tidak didukung browser ini');
-            }
+        // Initialize Firestore with persistent cache settings (offline persistence)
+        const db = initializeFirestore(app, {
+            localCache: persistentLocalCache({
+                tabManager: persistentMultipleTabManager()
+            })
         });
 
         // Expose DB to window so script.js can use it
