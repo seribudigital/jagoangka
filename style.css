@@ -229,11 +229,14 @@ body {
     }
 
     #screen-raport,
-    #screen-raport * {
+    #screen-raport *,
+    #screen-remedial-raport,
+    #screen-remedial-raport * {
         visibility: visible;
     }
 
-    #screen-raport {
+    #screen-raport,
+    #screen-remedial-raport {
         position: absolute;
         left: 0;
         top: 0;
@@ -244,7 +247,8 @@ body {
         z-index: 9999;
     }
 
-    #raport-content {
+    #raport-content,
+    #remedial-raport-content {
         box-shadow: none;
         border: none;
         width: 100%;
@@ -252,7 +256,8 @@ body {
     }
 
     /* Hide close button in print */
-    button[onclick="closeRaport()"] {
+    button[onclick="closeRaport()"],
+    button[onclick="closeRemedialRaport()"] {
         display: none;
     }
 }
