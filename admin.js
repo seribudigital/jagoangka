@@ -23,6 +23,11 @@ function sanitizeStudentName(name) {
     return name.replace(/[\.\#\$\/\[\]]/g, " ").trim().replace(/\s+/g, " ");
 }
 
+function sanitizeClassName(className) {
+    if (!className) return "";
+    return className.replace(/[\.\#\$\/\[\]]/g, "-").replace(/\s+/g, "").toUpperCase();
+}
+
 const els = {
     screenLogin: document.getElementById('screen-login'),
     screenDashboard: document.getElementById('screen-dashboard'),
@@ -303,7 +308,7 @@ els.btnImportStudents.addEventListener('click', async () => {
                         let kPin = Object.keys(row).find(k => k.toLowerCase() === 'pin');
                         
                         if (kKelas && kNama && row[kKelas] && row[kNama]) {
-                            let kelasVal = String(row[kKelas]).replace(/\s+/g, '').toUpperCase();
+                            let kelasVal = sanitizeClassName(String(row[kKelas]));
                             let namaVal = sanitizeStudentName(String(row[kNama]));
                             let pinVal = (kPin && row[kPin]) ? String(row[kPin]).trim() : "1234";
                             
@@ -329,13 +334,14 @@ els.btnImportStudents.addEventListener('click', async () => {
                         
                         // Normalisasi data yang ada sebelum di-merge
                         for (const kelas in existingData) {
-                            finalData[kelas] = {};
+                            const cleanClass = sanitizeClassName(kelas);
+                            finalData[cleanClass] = {};
                             const classData = existingData[kelas];
                             if (Array.isArray(classData)) {
                                 classData.forEach(name => {
                                     if (name && typeof name === 'string') {
                                         const cleanName = sanitizeStudentName(name);
-                                        finalData[kelas][cleanName] = "1234";
+                                        finalData[cleanClass][cleanName] = "1234";
                                     }
                                 });
                             } else if (typeof classData === 'object') {
@@ -344,11 +350,11 @@ els.btnImportStudents.addEventListener('click', async () => {
                                         const name = classData[key];
                                         if (name && typeof name === 'string') {
                                             const cleanName = sanitizeStudentName(name);
-                                            finalData[kelas][cleanName] = "1234";
+                                            finalData[cleanClass][cleanName] = "1234";
                                         }
                                     } else {
                                         const cleanKey = sanitizeStudentName(key);
-                                        finalData[kelas][cleanKey] = classData[key];
+                                        finalData[cleanClass][cleanKey] = classData[key];
                                     }
                                 }
                             }
@@ -356,10 +362,11 @@ els.btnImportStudents.addEventListener('click', async () => {
                         
                         // Merge dengan data baru yang di-import
                         for (const kelas in parsedData) {
-                            if (!finalData[kelas]) finalData[kelas] = {};
+                            const cleanClass2 = sanitizeClassName(kelas);
+                            if (!finalData[cleanClass2]) finalData[cleanClass2] = {};
                             for (const nama in parsedData[kelas]) {
                                 const cleanName = sanitizeStudentName(nama);
-                                finalData[kelas][cleanName] = parsedData[kelas][nama];
+                                finalData[cleanClass2][cleanName] = parsedData[kelas][nama];
                             }
                         }
                     }
@@ -418,19 +425,30 @@ if (els.btnSyncStudents) {
         showSyncStatus("Memulai sinkronisasi...");
 
         try {
+            // 0. Helper untuk Kategori Kelas
+            const deriveClassCategory = (inputClass) => {
+                const s = inputClass.toString().toUpperCase();
+                if (s.includes('7')) return '7';
+                if (s.includes('8')) return '8';
+                if (s.includes('9')) return '9';
+                if (['10', '11', '12', 'X', 'XI', 'XII', 'SMA', 'SMK', 'MA'].some(x => s.includes(x))) return 'SMA';
+                return '7';
+            };
+
             // 1. Ambil data Realtime Database terkini
             const snap = await get(ref(db, 'appConfig/students'));
             const currentStudents = {};
             if (snap.exists()) {
                 const rawData = snap.val();
                 for (const kelas in rawData) {
-                    currentStudents[kelas] = {};
+                    const cleanClass = sanitizeClassName(kelas);
+                    currentStudents[cleanClass] = {};
                     const classData = rawData[kelas];
                     if (Array.isArray(classData)) {
                         classData.forEach(name => {
                             if (name && typeof name === 'string') {
                                 const cleanName = sanitizeStudentName(name);
-                                currentStudents[kelas][cleanName] = "1234";
+                                currentStudents[cleanClass][cleanName] = "1234";
                             }
                         });
                     } else if (typeof classData === 'object') {
@@ -439,11 +457,11 @@ if (els.btnSyncStudents) {
                                 const name = classData[key];
                                 if (name && typeof name === 'string') {
                                     const cleanName = sanitizeStudentName(name);
-                                    currentStudents[kelas][cleanName] = "1234";
+                                    currentStudents[cleanClass][cleanName] = "1234";
                                 }
                             } else {
                                 const cleanKey = sanitizeStudentName(key);
-                                currentStudents[kelas][cleanKey] = classData[key];
+                                currentStudents[cleanClass][cleanKey] = classData[key];
                             }
                         }
                     }
@@ -465,22 +483,28 @@ if (els.btnSyncStudents) {
             remedialSnap.forEach(docSnap => {
                 const data = docSnap.data();
                 if (data && data.nama && data.kelasRaw) {
-                    const kelasVal = String(data.kelasRaw).replace(/\s+/g, '').toUpperCase();
+                    const originalClass = String(data.kelasRaw).trim();
+                    const sanitizedClass = sanitizeClassName(originalClass);
+                    
                     const originalName = String(data.nama).trim();
                     const sanitizedName = sanitizeStudentName(originalName);
 
-                    if (kelasVal && sanitizedName) {
-                        if (originalName !== sanitizedName) {
+                    if (sanitizedClass && sanitizedName) {
+                        if (originalName !== sanitizedName || originalClass !== sanitizedClass) {
                             const docRef = doc(dbFirestore, 'remedial_exams', docSnap.id);
-                            firestoreUpdatePromises.push(updateDoc(docRef, { nama: sanitizedName }));
-                            dbUpdateLogs.push(`Migrasi remedial_exams: ${originalName} -> ${sanitizedName}`);
+                            firestoreUpdatePromises.push(updateDoc(docRef, { 
+                                nama: sanitizedName, 
+                                kelasRaw: sanitizedClass,
+                                kelasKategori: deriveClassCategory(sanitizedClass)
+                            }));
+                            dbUpdateLogs.push(`Migrasi remedial_exams: [${originalClass}, ${originalName}] -> [${sanitizedClass}, ${sanitizedName}]`);
                         }
 
-                        if (!currentStudents[kelasVal]) {
-                            currentStudents[kelasVal] = {};
+                        if (!currentStudents[sanitizedClass]) {
+                            currentStudents[sanitizedClass] = {};
                         }
-                        if (!currentStudents[kelasVal][sanitizedName]) {
-                            currentStudents[kelasVal][sanitizedName] = "1234";
+                        if (!currentStudents[sanitizedClass][sanitizedName]) {
+                            currentStudents[sanitizedClass][sanitizedName] = "1234";
                             addedCount++;
                         }
                     }
@@ -491,31 +515,37 @@ if (els.btnSyncStudents) {
             scoresSnap.forEach(docSnap => {
                 const data = docSnap.data();
                 if (data && data.nama && data.kelasRaw) {
-                    const kelasVal = String(data.kelasRaw).replace(/\s+/g, '').toUpperCase();
+                    const originalClass = String(data.kelasRaw).trim();
+                    const sanitizedClass = sanitizeClassName(originalClass);
+                    
                     const originalName = String(data.nama).trim();
                     const sanitizedName = sanitizeStudentName(originalName);
 
-                    if (kelasVal && sanitizedName) {
-                        if (originalName !== sanitizedName) {
+                    if (sanitizedClass && sanitizedName) {
+                        if (originalName !== sanitizedName || originalClass !== sanitizedClass) {
                             const docRef = doc(dbFirestore, 'scores', docSnap.id);
-                            firestoreUpdatePromises.push(updateDoc(docRef, { nama: sanitizedName }));
-                            dbUpdateLogs.push(`Migrasi scores: ${originalName} -> ${sanitizedName}`);
+                            firestoreUpdatePromises.push(updateDoc(docRef, { 
+                                nama: sanitizedName, 
+                                kelasRaw: sanitizedClass,
+                                kelasKategori: deriveClassCategory(sanitizedClass)
+                            }));
+                            dbUpdateLogs.push(`Migrasi scores: [${originalClass}, ${originalName}] -> [${sanitizedClass}, ${sanitizedName}]`);
                         }
 
-                        if (!currentStudents[kelasVal]) {
-                            currentStudents[kelasVal] = {};
+                        if (!currentStudents[sanitizedClass]) {
+                            currentStudents[sanitizedClass] = {};
                         }
-                        if (!currentStudents[kelasVal][sanitizedName]) {
-                            currentStudents[kelasVal][sanitizedName] = "1234";
+                        if (!currentStudents[sanitizedClass][sanitizedName]) {
+                            currentStudents[sanitizedClass][sanitizedName] = "1234";
                             addedCount++;
                         }
                     }
                 }
             });
 
-            // Jalankan update Firestore jika ada nama yang perlu dimigrasikan
+            // Jalankan update Firestore jika ada nama/kelas yang perlu dimigrasikan
             if (firestoreUpdatePromises.length > 0) {
-                showSyncStatus(`Memigrasikan ${firestoreUpdatePromises.length} data nama di database Firestore...`);
+                showSyncStatus(`Memigrasikan ${firestoreUpdatePromises.length} data hasil ujian di Firestore...`);
                 await Promise.all(firestoreUpdatePromises);
                 console.log("Firestore migration complete:", dbUpdateLogs);
             }
@@ -534,7 +564,7 @@ if (els.btnSyncStudents) {
                 await set(ref(db, 'appConfig/students'), sortedFinal);
                 let msg = `✅ Sinkronisasi berhasil! Berhasil menambahkan ${addedCount} siswa lama ke daftar.`;
                 if (firestoreUpdatePromises.length > 0) {
-                    msg += ` Serta berhasil memigrasi ${firestoreUpdatePromises.length} data nama di Firestore.`;
+                    msg += ` Serta berhasil memigrasi ${firestoreUpdatePromises.length} data nilai/kelas di Firestore.`;
                 }
                 showSyncStatus(msg, false);
                 
@@ -562,21 +592,28 @@ async function loadAdminStudents() {
         
         // Normalisasi struktur (mengubah format array lama menjadi object dengan PIN)
         for (const kelas in rawData) {
-            adminStudentData[kelas] = {};
+            const cleanClass = sanitizeClassName(kelas);
+            adminStudentData[cleanClass] = {};
             const classData = rawData[kelas];
             
             if (Array.isArray(classData)) {
                 classData.forEach(name => {
-                    if (name && typeof name === 'string') adminStudentData[kelas][name] = "1234";
+                    if (name && typeof name === 'string') {
+                        const cleanName = sanitizeStudentName(name);
+                        adminStudentData[cleanClass][cleanName] = "1234";
+                    }
                 });
             } else if (typeof classData === 'object') {
                 for (const key in classData) {
                     if (!isNaN(key)) {
-                        // Format array lama yang tersimpan sebagai object (key 0, 1, 2)
                         const name = classData[key];
-                        if (name && typeof name === 'string') adminStudentData[kelas][name] = "1234";
+                        if (name && typeof name === 'string') {
+                            const cleanName = sanitizeStudentName(name);
+                            adminStudentData[cleanClass][cleanName] = "1234";
+                        }
                     } else {
-                        adminStudentData[kelas][key] = classData[key];
+                        const cleanKey = sanitizeStudentName(key);
+                        adminStudentData[cleanClass][cleanKey] = classData[key];
                     }
                 }
             }

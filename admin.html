@@ -289,6 +289,11 @@
         return name.replace(/[\.\#\$\/\[\]]/g, " ").trim().replace(/\s+/g, " ");
     }
 
+    function sanitizeClassName(className) {
+        if (!className) return "";
+        return className.replace(/[\.\#\$\/\[\]]/g, "-").replace(/\s+/g, "").toUpperCase();
+    }
+
     // ===== FIREBASE INIT (Compat SDK - no modules needed) =====
     const firebaseConfig = {
         apiKey: atob("QUl6YVN5RGJBeXNtUVJrSUFUWE1JVnNJYWY4ZWktcUo0cWM5QzBr"),
@@ -579,7 +584,7 @@
                             var kPin = Object.keys(row).find(function(k) { return k.toLowerCase() === 'pin'; });
                             
                             if (kKelas && kNama && row[kKelas] && row[kNama]) {
-                                var kelasVal = String(row[kKelas]).replace(/\s+/g, '').toUpperCase();
+                                var kelasVal = sanitizeClassName(String(row[kKelas]));
                                 var namaVal = sanitizeStudentName(String(row[kNama]));
                                 var pinVal = (kPin && row[kPin]) ? String(row[kPin]).trim() : "1234";
                                 
@@ -604,13 +609,14 @@
                             finalData = {};
                             
                             for (var kelas in existingData) {
-                                finalData[kelas] = {};
+                                var cleanClass = sanitizeClassName(kelas);
+                                finalData[cleanClass] = {};
                                 var classData = existingData[kelas];
                                 if (Array.isArray(classData)) {
                                     classData.forEach(function(name) {
                                         if (name && typeof name === 'string') {
                                             var cleanName = sanitizeStudentName(name);
-                                            finalData[kelas][cleanName] = "1234";
+                                            finalData[cleanClass][cleanName] = "1234";
                                         }
                                     });
                                 } else if (typeof classData === 'object') {
@@ -619,21 +625,22 @@
                                             var name = classData[key];
                                             if (name && typeof name === 'string') {
                                                 var cleanName = sanitizeStudentName(name);
-                                                finalData[kelas][cleanName] = "1234";
+                                                finalData[cleanClass][cleanName] = "1234";
                                             }
                                         } else {
                                             var cleanKey = sanitizeStudentName(key);
-                                            finalData[kelas][cleanKey] = classData[key];
+                                            finalData[cleanClass][cleanKey] = classData[key];
                                         }
                                     }
                                 }
                             }
                             
                             for (var kelas2 in parsedData) {
-                                if (!finalData[kelas2]) finalData[kelas2] = {};
+                                var cleanClass2 = sanitizeClassName(kelas2);
+                                if (!finalData[cleanClass2]) finalData[cleanClass2] = {};
                                 for (var nama in parsedData[kelas2]) {
                                     var cleanName = sanitizeStudentName(nama);
-                                    finalData[kelas2][cleanName] = parsedData[kelas2][nama];
+                                    finalData[cleanClass2][cleanName] = parsedData[kelas2][nama];
                                 }
                             }
                         }
@@ -988,19 +995,30 @@
             showSyncStatus("Memulai sinkronisasi...");
 
             try {
+                // 0. Helper untuk Kategori Kelas
+                function deriveClassCategory(inputClass) {
+                    var s = inputClass.toString().toUpperCase();
+                    if (s.indexOf('7') !== -1) return '7';
+                    if (s.indexOf('8') !== -1) return '8';
+                    if (s.indexOf('9') !== -1) return '9';
+                    if (['10', '11', '12', 'X', 'XI', 'XII', 'SMA', 'SMK', 'MA'].some(function(x) { return s.indexOf(x) !== -1; })) return 'SMA';
+                    return '7';
+                }
+
                 // 1. Ambil data Realtime Database terkini
                 var snap = await db.ref('appConfig/students').once('value');
                 var currentStudents = {};
                 if (snap.exists()) {
                     var rawData = snap.val();
                     for (var kelas in rawData) {
-                        currentStudents[kelas] = {};
+                        var cleanClass = sanitizeClassName(kelas);
+                        currentStudents[cleanClass] = {};
                         var classData = rawData[kelas];
                         if (Array.isArray(classData)) {
                             classData.forEach(function(name) {
                                 if (name && typeof name === 'string') {
                                     var cleanName = sanitizeStudentName(name);
-                                    currentStudents[kelas][cleanName] = "1234";
+                                    currentStudents[cleanClass][cleanName] = "1234";
                                 }
                             });
                         } else if (typeof classData === 'object') {
@@ -1009,11 +1027,11 @@
                                     var name = classData[key];
                                     if (name && typeof name === 'string') {
                                         var cleanName = sanitizeStudentName(name);
-                                        currentStudents[kelas][cleanName] = "1234";
+                                        currentStudents[cleanClass][cleanName] = "1234";
                                     }
                                 } else {
                                     var cleanKey = sanitizeStudentName(key);
-                                    currentStudents[kelas][cleanKey] = classData[key];
+                                    currentStudents[cleanClass][cleanKey] = classData[key];
                                 }
                             }
                         }
@@ -1035,22 +1053,28 @@
                 remedialSnap.forEach(function(doc) {
                     var data = doc.data();
                     if (data && data.nama && data.kelasRaw) {
-                        var kelasVal = String(data.kelasRaw).replace(/\s+/g, '').toUpperCase();
+                        var originalClass = String(data.kelasRaw).trim();
+                        var sanitizedClass = sanitizeClassName(originalClass);
+                        
                         var originalName = String(data.nama).trim();
                         var sanitizedName = sanitizeStudentName(originalName);
 
-                        if (kelasVal && sanitizedName) {
-                            if (originalName !== sanitizedName) {
+                        if (sanitizedClass && sanitizedName) {
+                            if (originalName !== sanitizedName || originalClass !== sanitizedClass) {
                                 var docRef = dbFirestore.collection('remedial_exams').doc(doc.id);
-                                firestoreUpdatePromises.push(docRef.update({ nama: sanitizedName }));
-                                dbUpdateLogs.push("Migrasi remedial_exams: " + originalName + " -> " + sanitizedName);
+                                firestoreUpdatePromises.push(docRef.update({ 
+                                    nama: sanitizedName, 
+                                    kelasRaw: sanitizedClass,
+                                    kelasKategori: deriveClassCategory(sanitizedClass)
+                                }));
+                                dbUpdateLogs.push("Migrasi remedial_exams: [" + originalClass + ", " + originalName + "] -> [" + sanitizedClass + ", " + sanitizedName + "]");
                             }
 
-                            if (!currentStudents[kelasVal]) {
-                                currentStudents[kelasVal] = {};
+                            if (!currentStudents[sanitizedClass]) {
+                                currentStudents[sanitizedClass] = {};
                             }
-                            if (!currentStudents[kelasVal][sanitizedName]) {
-                                currentStudents[kelasVal][sanitizedName] = "1234";
+                            if (!currentStudents[sanitizedClass][sanitizedName]) {
+                                currentStudents[sanitizedClass][sanitizedName] = "1234";
                                 addedCount++;
                             }
                         }
@@ -1061,31 +1085,37 @@
                 scoresSnap.forEach(function(doc) {
                     var data = doc.data();
                     if (data && data.nama && data.kelasRaw) {
-                        var kelasVal = String(data.kelasRaw).replace(/\s+/g, '').toUpperCase();
+                        var originalClass = String(data.kelasRaw).trim();
+                        var sanitizedClass = sanitizeClassName(originalClass);
+                        
                         var originalName = String(data.nama).trim();
                         var sanitizedName = sanitizeStudentName(originalName);
 
-                        if (kelasVal && sanitizedName) {
-                            if (originalName !== sanitizedName) {
+                        if (sanitizedClass && sanitizedName) {
+                            if (originalName !== sanitizedName || originalClass !== sanitizedClass) {
                                 var docRef = dbFirestore.collection('scores').doc(doc.id);
-                                firestoreUpdatePromises.push(docRef.update({ nama: sanitizedName }));
-                                dbUpdateLogs.push("Migrasi scores: " + originalName + " -> " + sanitizedName);
+                                firestoreUpdatePromises.push(docRef.update({ 
+                                    nama: sanitizedName, 
+                                    kelasRaw: sanitizedClass,
+                                    kelasKategori: deriveClassCategory(sanitizedClass)
+                                }));
+                                dbUpdateLogs.push("Migrasi scores: [" + originalClass + ", " + originalName + "] -> [" + sanitizedClass + ", " + sanitizedName + "]");
                             }
 
-                            if (!currentStudents[kelasVal]) {
-                                currentStudents[kelasVal] = {};
+                            if (!currentStudents[sanitizedClass]) {
+                                currentStudents[sanitizedClass] = {};
                             }
-                            if (!currentStudents[kelasVal][sanitizedName]) {
-                                currentStudents[kelasVal][sanitizedName] = "1234";
+                            if (!currentStudents[sanitizedClass][sanitizedName]) {
+                                currentStudents[sanitizedClass][sanitizedName] = "1234";
                                 addedCount++;
                             }
                         }
                     }
                 });
 
-                // Jalankan update Firestore jika ada nama yang perlu dimigrasikan
+                // Jalankan update Firestore jika ada nama/kelas yang perlu dimigrasikan
                 if (firestoreUpdatePromises.length > 0) {
-                    showSyncStatus("Memigrasikan " + firestoreUpdatePromises.length + " data nama di database Firestore...");
+                    showSyncStatus("Memigrasikan " + firestoreUpdatePromises.length + " data hasil ujian di Firestore...");
                     await Promise.all(firestoreUpdatePromises);
                     console.log("Firestore migration complete:", dbUpdateLogs);
                 }
@@ -1104,7 +1134,7 @@
                     await db.ref('appConfig/students').set(sortedFinal);
                     var msg = "✅ Sinkronisasi berhasil! Berhasil menambahkan " + addedCount + " siswa lama ke daftar.";
                     if (firestoreUpdatePromises.length > 0) {
-                        msg += " Serta berhasil memigrasi " + firestoreUpdatePromises.length + " data nama di Firestore.";
+                        msg += " Serta berhasil memigrasi " + firestoreUpdatePromises.length + " data nilai/kelas di Firestore.";
                     }
                     showSyncStatus(msg, false);
                     

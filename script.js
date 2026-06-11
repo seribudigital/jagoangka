@@ -319,9 +319,14 @@ function sanitizeStudentName(name) {
     return name.replace(/[\.\#\$\/\[\]]/g, " ").trim().replace(/\s+/g, " ");
 }
 
+function sanitizeClassName(className) {
+    if (!className) return "";
+    return className.replace(/[\.\#\$\/\[\]]/g, "-").replace(/\s+/g, "").toUpperCase();
+}
+
 async function appendNewStudentToFirebase(className, name, pin) {
     if (!className || !name) return;
-    const cleanClass = className.trim().toUpperCase();
+    const cleanClass = sanitizeClassName(className);
     const cleanName = sanitizeStudentName(name);
     const cleanPin = pin ? pin.trim() : "1234";
     
@@ -362,7 +367,7 @@ function init() {
         
         if (els.loginManualMode && !els.loginManualMode.classList.contains('hidden')) {
             name = sanitizeStudentName(els.inputName.value);
-            className = els.inputClass.value;
+            className = sanitizeClassName(els.inputClass.value);
             pin = els.inputNewPin.value || "1234";
             if (pin.length < 4) {
                 alert("PIN harus terdiri dari minimal 4 angka!");
