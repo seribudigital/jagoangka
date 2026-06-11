@@ -284,6 +284,11 @@
     </main>
 
     <script>
+    function sanitizeStudentName(name) {
+        if (!name) return "";
+        return name.replace(/[\.\#\$\/\[\]]/g, " ").trim().replace(/\s+/g, " ");
+    }
+
     // ===== FIREBASE INIT (Compat SDK - no modules needed) =====
     const firebaseConfig = {
         apiKey: atob("QUl6YVN5RGJBeXNtUVJrSUFUWE1JVnNJYWY4ZWktcUo0cWM5QzBr"),
@@ -575,7 +580,7 @@
                             
                             if (kKelas && kNama && row[kKelas] && row[kNama]) {
                                 var kelasVal = String(row[kKelas]).replace(/\s+/g, '').toUpperCase();
-                                var namaVal = String(row[kNama]).trim();
+                                var namaVal = sanitizeStudentName(String(row[kNama]));
                                 var pinVal = (kPin && row[kPin]) ? String(row[kPin]).trim() : "1234";
                                 
                                 if (kelasVal && namaVal) {
@@ -603,15 +608,22 @@
                                 var classData = existingData[kelas];
                                 if (Array.isArray(classData)) {
                                     classData.forEach(function(name) {
-                                        if (name && typeof name === 'string') finalData[kelas][name] = "1234";
+                                        if (name && typeof name === 'string') {
+                                            var cleanName = sanitizeStudentName(name);
+                                            finalData[kelas][cleanName] = "1234";
+                                        }
                                     });
                                 } else if (typeof classData === 'object') {
                                     for (var key in classData) {
                                         if (!isNaN(key)) {
                                             var name = classData[key];
-                                            if (name && typeof name === 'string') finalData[kelas][name] = "1234";
+                                            if (name && typeof name === 'string') {
+                                                var cleanName = sanitizeStudentName(name);
+                                                finalData[kelas][cleanName] = "1234";
+                                            }
                                         } else {
-                                            finalData[kelas][key] = classData[key];
+                                            var cleanKey = sanitizeStudentName(key);
+                                            finalData[kelas][cleanKey] = classData[key];
                                         }
                                     }
                                 }
@@ -620,7 +632,8 @@
                             for (var kelas2 in parsedData) {
                                 if (!finalData[kelas2]) finalData[kelas2] = {};
                                 for (var nama in parsedData[kelas2]) {
-                                    finalData[kelas2][nama] = parsedData[kelas2][nama];
+                                    var cleanName = sanitizeStudentName(nama);
+                                    finalData[kelas2][cleanName] = parsedData[kelas2][nama];
                                 }
                             }
                         }
@@ -985,15 +998,22 @@
                         var classData = rawData[kelas];
                         if (Array.isArray(classData)) {
                             classData.forEach(function(name) {
-                                if (name && typeof name === 'string') currentStudents[kelas][name] = "1234";
+                                if (name && typeof name === 'string') {
+                                    var cleanName = sanitizeStudentName(name);
+                                    currentStudents[kelas][cleanName] = "1234";
+                                }
                             });
                         } else if (typeof classData === 'object') {
                             for (var key in classData) {
                                 if (!isNaN(key)) {
                                     var name = classData[key];
-                                    if (name && typeof name === 'string') currentStudents[kelas][name] = "1234";
+                                    if (name && typeof name === 'string') {
+                                        var cleanName = sanitizeStudentName(name);
+                                        currentStudents[kelas][cleanName] = "1234";
+                                    }
                                 } else {
-                                    currentStudents[kelas][key] = classData[key];
+                                    var cleanKey = sanitizeStudentName(key);
+                                    currentStudents[kelas][cleanKey] = classData[key];
                                 }
                             }
                         }
@@ -1008,19 +1028,29 @@
                 var scoresSnap = await dbFirestore.collection('scores').get();
 
                 var addedCount = 0;
+                var firestoreUpdatePromises = [];
+                var dbUpdateLogs = [];
 
                 // 3. Proses hasil remedial_exams
                 remedialSnap.forEach(function(doc) {
                     var data = doc.data();
                     if (data && data.nama && data.kelasRaw) {
                         var kelasVal = String(data.kelasRaw).replace(/\s+/g, '').toUpperCase();
-                        var namaVal = String(data.nama).trim();
-                        if (kelasVal && namaVal) {
+                        var originalName = String(data.nama).trim();
+                        var sanitizedName = sanitizeStudentName(originalName);
+
+                        if (kelasVal && sanitizedName) {
+                            if (originalName !== sanitizedName) {
+                                var docRef = dbFirestore.collection('remedial_exams').doc(doc.id);
+                                firestoreUpdatePromises.push(docRef.update({ nama: sanitizedName }));
+                                dbUpdateLogs.push("Migrasi remedial_exams: " + originalName + " -> " + sanitizedName);
+                            }
+
                             if (!currentStudents[kelasVal]) {
                                 currentStudents[kelasVal] = {};
                             }
-                            if (!currentStudents[kelasVal][namaVal]) {
-                                currentStudents[kelasVal][namaVal] = "1234";
+                            if (!currentStudents[kelasVal][sanitizedName]) {
+                                currentStudents[kelasVal][sanitizedName] = "1234";
                                 addedCount++;
                             }
                         }
@@ -1032,20 +1062,35 @@
                     var data = doc.data();
                     if (data && data.nama && data.kelasRaw) {
                         var kelasVal = String(data.kelasRaw).replace(/\s+/g, '').toUpperCase();
-                        var namaVal = String(data.nama).trim();
-                        if (kelasVal && namaVal) {
+                        var originalName = String(data.nama).trim();
+                        var sanitizedName = sanitizeStudentName(originalName);
+
+                        if (kelasVal && sanitizedName) {
+                            if (originalName !== sanitizedName) {
+                                var docRef = dbFirestore.collection('scores').doc(doc.id);
+                                firestoreUpdatePromises.push(docRef.update({ nama: sanitizedName }));
+                                dbUpdateLogs.push("Migrasi scores: " + originalName + " -> " + sanitizedName);
+                            }
+
                             if (!currentStudents[kelasVal]) {
                                 currentStudents[kelasVal] = {};
                             }
-                            if (!currentStudents[kelasVal][namaVal]) {
-                                currentStudents[kelasVal][namaVal] = "1234";
+                            if (!currentStudents[kelasVal][sanitizedName]) {
+                                currentStudents[kelasVal][sanitizedName] = "1234";
                                 addedCount++;
                             }
                         }
                     }
                 });
 
-                if (addedCount > 0) {
+                // Jalankan update Firestore jika ada nama yang perlu dimigrasikan
+                if (firestoreUpdatePromises.length > 0) {
+                    showSyncStatus("Memigrasikan " + firestoreUpdatePromises.length + " data nama di database Firestore...");
+                    await Promise.all(firestoreUpdatePromises);
+                    console.log("Firestore migration complete:", dbUpdateLogs);
+                }
+
+                if (addedCount > 0 || firestoreUpdatePromises.length > 0) {
                     showSyncStatus("Mengurutkan data dan menyimpan...");
                     // Urutkan alfabetis
                     var sortedFinal = {};
@@ -1057,7 +1102,11 @@
                     });
 
                     await db.ref('appConfig/students').set(sortedFinal);
-                    showSyncStatus("✅ Sinkronisasi berhasil! Berhasil menambahkan " + addedCount + " siswa lama ke daftar.", false);
+                    var msg = "✅ Sinkronisasi berhasil! Berhasil menambahkan " + addedCount + " siswa lama ke daftar.";
+                    if (firestoreUpdatePromises.length > 0) {
+                        msg += " Serta berhasil memigrasi " + firestoreUpdatePromises.length + " data nama di Firestore.";
+                    }
+                    showSyncStatus(msg, false);
                     
                     // Refresh data di tabel admin
                     loadAdminStudents();

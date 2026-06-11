@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 import { getDatabase, ref, get, set } from "firebase/database";
-import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { getFirestore, collection, getDocs, doc, updateDoc } from "firebase/firestore";
 
 const firebaseConfig = {
     apiKey: atob("QUl6YVN5RGJBeXNtUVJrSUFUWE1JVnNJYWY4ZWktcUo0cWM5QzBr"),
@@ -17,6 +17,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 const dbFirestore = getFirestore(app);
+
+function sanitizeStudentName(name) {
+    if (!name) return "";
+    return name.replace(/[\.\#\$\/\[\]]/g, " ").trim().replace(/\s+/g, " ");
+}
 
 const els = {
     screenLogin: document.getElementById('screen-login'),
@@ -299,7 +304,7 @@ els.btnImportStudents.addEventListener('click', async () => {
                         
                         if (kKelas && kNama && row[kKelas] && row[kNama]) {
                             let kelasVal = String(row[kKelas]).replace(/\s+/g, '').toUpperCase();
-                            let namaVal = String(row[kNama]).trim();
+                            let namaVal = sanitizeStudentName(String(row[kNama]));
                             let pinVal = (kPin && row[kPin]) ? String(row[kPin]).trim() : "1234";
                             
                             if (kelasVal && namaVal) {
@@ -328,15 +333,22 @@ els.btnImportStudents.addEventListener('click', async () => {
                             const classData = existingData[kelas];
                             if (Array.isArray(classData)) {
                                 classData.forEach(name => {
-                                    if (name && typeof name === 'string') finalData[kelas][name] = "1234";
+                                    if (name && typeof name === 'string') {
+                                        const cleanName = sanitizeStudentName(name);
+                                        finalData[kelas][cleanName] = "1234";
+                                    }
                                 });
                             } else if (typeof classData === 'object') {
                                 for (const key in classData) {
                                     if (!isNaN(key)) {
                                         const name = classData[key];
-                                        if (name && typeof name === 'string') finalData[kelas][name] = "1234";
+                                        if (name && typeof name === 'string') {
+                                            const cleanName = sanitizeStudentName(name);
+                                            finalData[kelas][cleanName] = "1234";
+                                        }
                                     } else {
-                                        finalData[kelas][key] = classData[key];
+                                        const cleanKey = sanitizeStudentName(key);
+                                        finalData[kelas][cleanKey] = classData[key];
                                     }
                                 }
                             }
@@ -346,7 +358,8 @@ els.btnImportStudents.addEventListener('click', async () => {
                         for (const kelas in parsedData) {
                             if (!finalData[kelas]) finalData[kelas] = {};
                             for (const nama in parsedData[kelas]) {
-                                finalData[kelas][nama] = parsedData[kelas][nama];
+                                const cleanName = sanitizeStudentName(nama);
+                                finalData[kelas][cleanName] = parsedData[kelas][nama];
                             }
                         }
                     }
@@ -415,15 +428,22 @@ if (els.btnSyncStudents) {
                     const classData = rawData[kelas];
                     if (Array.isArray(classData)) {
                         classData.forEach(name => {
-                            if (name && typeof name === 'string') currentStudents[kelas][name] = "1234";
+                            if (name && typeof name === 'string') {
+                                const cleanName = sanitizeStudentName(name);
+                                currentStudents[kelas][cleanName] = "1234";
+                            }
                         });
                     } else if (typeof classData === 'object') {
                         for (const key in classData) {
                             if (!isNaN(key)) {
                                 const name = classData[key];
-                                if (name && typeof name === 'string') currentStudents[kelas][name] = "1234";
+                                if (name && typeof name === 'string') {
+                                    const cleanName = sanitizeStudentName(name);
+                                    currentStudents[kelas][cleanName] = "1234";
+                                }
                             } else {
-                                currentStudents[kelas][key] = classData[key];
+                                const cleanKey = sanitizeStudentName(key);
+                                currentStudents[kelas][cleanKey] = classData[key];
                             }
                         }
                     }
@@ -438,19 +458,29 @@ if (els.btnSyncStudents) {
             const scoresSnap = await getDocs(collection(dbFirestore, 'scores'));
 
             let addedCount = 0;
+            const firestoreUpdatePromises = [];
+            const dbUpdateLogs = [];
 
             // 3. Proses hasil remedial_exams
-            remedialSnap.forEach(doc => {
-                const data = doc.data();
+            remedialSnap.forEach(docSnap => {
+                const data = docSnap.data();
                 if (data && data.nama && data.kelasRaw) {
                     const kelasVal = String(data.kelasRaw).replace(/\s+/g, '').toUpperCase();
-                    const namaVal = String(data.nama).trim();
-                    if (kelasVal && namaVal) {
+                    const originalName = String(data.nama).trim();
+                    const sanitizedName = sanitizeStudentName(originalName);
+
+                    if (kelasVal && sanitizedName) {
+                        if (originalName !== sanitizedName) {
+                            const docRef = doc(dbFirestore, 'remedial_exams', docSnap.id);
+                            firestoreUpdatePromises.push(updateDoc(docRef, { nama: sanitizedName }));
+                            dbUpdateLogs.push(`Migrasi remedial_exams: ${originalName} -> ${sanitizedName}`);
+                        }
+
                         if (!currentStudents[kelasVal]) {
                             currentStudents[kelasVal] = {};
                         }
-                        if (!currentStudents[kelasVal][namaVal]) {
-                            currentStudents[kelasVal][namaVal] = "1234";
+                        if (!currentStudents[kelasVal][sanitizedName]) {
+                            currentStudents[kelasVal][sanitizedName] = "1234";
                             addedCount++;
                         }
                     }
@@ -458,24 +488,39 @@ if (els.btnSyncStudents) {
             });
 
             // 4. Proses hasil scores
-            scoresSnap.forEach(doc => {
-                const data = doc.data();
+            scoresSnap.forEach(docSnap => {
+                const data = docSnap.data();
                 if (data && data.nama && data.kelasRaw) {
                     const kelasVal = String(data.kelasRaw).replace(/\s+/g, '').toUpperCase();
-                    const namaVal = String(data.nama).trim();
-                    if (kelasVal && namaVal) {
+                    const originalName = String(data.nama).trim();
+                    const sanitizedName = sanitizeStudentName(originalName);
+
+                    if (kelasVal && sanitizedName) {
+                        if (originalName !== sanitizedName) {
+                            const docRef = doc(dbFirestore, 'scores', docSnap.id);
+                            firestoreUpdatePromises.push(updateDoc(docRef, { nama: sanitizedName }));
+                            dbUpdateLogs.push(`Migrasi scores: ${originalName} -> ${sanitizedName}`);
+                        }
+
                         if (!currentStudents[kelasVal]) {
                             currentStudents[kelasVal] = {};
                         }
-                        if (!currentStudents[kelasVal][namaVal]) {
-                            currentStudents[kelasVal][namaVal] = "1234";
+                        if (!currentStudents[kelasVal][sanitizedName]) {
+                            currentStudents[kelasVal][sanitizedName] = "1234";
                             addedCount++;
                         }
                     }
                 }
             });
 
-            if (addedCount > 0) {
+            // Jalankan update Firestore jika ada nama yang perlu dimigrasikan
+            if (firestoreUpdatePromises.length > 0) {
+                showSyncStatus(`Memigrasikan ${firestoreUpdatePromises.length} data nama di database Firestore...`);
+                await Promise.all(firestoreUpdatePromises);
+                console.log("Firestore migration complete:", dbUpdateLogs);
+            }
+
+            if (addedCount > 0 || firestoreUpdatePromises.length > 0) {
                 showSyncStatus("Mengurutkan data dan menyimpan...");
                 // Urutkan alfabetis
                 const sortedFinal = {};
@@ -487,7 +532,11 @@ if (els.btnSyncStudents) {
                 });
 
                 await set(ref(db, 'appConfig/students'), sortedFinal);
-                showSyncStatus(`✅ Sinkronisasi berhasil! Berhasil menambahkan ${addedCount} siswa lama ke daftar.`, false);
+                let msg = `✅ Sinkronisasi berhasil! Berhasil menambahkan ${addedCount} siswa lama ke daftar.`;
+                if (firestoreUpdatePromises.length > 0) {
+                    msg += ` Serta berhasil memigrasi ${firestoreUpdatePromises.length} data nama di Firestore.`;
+                }
+                showSyncStatus(msg, false);
                 
                 // Refresh data di tabel admin
                 loadAdminStudents();

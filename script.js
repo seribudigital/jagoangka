@@ -314,10 +314,15 @@ window.cancelNewStudent = function() {
     if(els.inputNewPin) els.inputNewPin.removeAttribute('required');
 }
 
+function sanitizeStudentName(name) {
+    if (!name) return "";
+    return name.replace(/[\.\#\$\/\[\]]/g, " ").trim().replace(/\s+/g, " ");
+}
+
 async function appendNewStudentToFirebase(className, name, pin) {
     if (!className || !name) return;
     const cleanClass = className.trim().toUpperCase();
-    const cleanName = name.trim();
+    const cleanName = sanitizeStudentName(name);
     const cleanPin = pin ? pin.trim() : "1234";
     
     try {
@@ -356,7 +361,7 @@ function init() {
         let pin = '';
         
         if (els.loginManualMode && !els.loginManualMode.classList.contains('hidden')) {
-            name = els.inputName.value;
+            name = sanitizeStudentName(els.inputName.value);
             className = els.inputClass.value;
             pin = els.inputNewPin.value || "1234";
             if (pin.length < 4) {
