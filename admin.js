@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 import { getDatabase, ref, get, set } from "firebase/database";
-import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, query, where, Timestamp } from "firebase/firestore";
+import { getFirestore, collection, getDocs, getDocsFromServer, doc, updateDoc, deleteDoc, query, where, Timestamp } from "firebase/firestore";
 
 const firebaseConfig = {
     apiKey: atob("QUl6YVN5RGJBeXNtUVJrSUFUWE1JVnNJYWY4ZWktcUo0cWM5QzBr"),
@@ -473,12 +473,12 @@ if (els.btnSyncStudents) {
                 }
             }
 
-            // 2. Ambil data hasil ujian dari Firestore
+            // 2. Ambil data hasil ujian dari Firestore (Bypass Cache Server)
             showSyncStatus("Memindai database ujian di Firestore (remedial_exams)...");
-            const remedialSnap = await getDocs(collection(dbFirestore, 'remedial_exams'));
+            const remedialSnap = await getDocsFromServer(collection(dbFirestore, 'remedial_exams'));
             
             showSyncStatus("Memindai database latihan/ujian di Firestore (scores)...");
-            const scoresSnap = await getDocs(collection(dbFirestore, 'scores'));
+            const scoresSnap = await getDocsFromServer(collection(dbFirestore, 'scores'));
 
             let addedCount = 0;
             const firestoreUpdatePromises = [];
@@ -732,8 +732,8 @@ if (els.btnBackupData) {
                 return ops[op] || op;
             };
 
-            // Fetch all scores
-            const scoresSnap = await getDocs(collection(dbFirestore, 'scores'));
+            // Fetch all scores (Bypass Cache Server)
+            const scoresSnap = await getDocsFromServer(collection(dbFirestore, 'scores'));
             const scoresData = [];
             scoresSnap.forEach(docSnap => {
                 const d = docSnap.data();
@@ -754,8 +754,8 @@ if (els.btnBackupData) {
                 });
             });
 
-            // Fetch all remedial exams
-            const remedialSnap = await getDocs(collection(dbFirestore, 'remedial_exams'));
+            // Fetch all remedial exams (Bypass Cache Server)
+            const remedialSnap = await getDocsFromServer(collection(dbFirestore, 'remedial_exams'));
             const remedialData = [];
             remedialSnap.forEach(docSnap => {
                 const d = docSnap.data();
@@ -827,13 +827,13 @@ if (els.btnCleanupOldData) {
         try {
             const firestoreCutoff = Timestamp.fromDate(cutoffDate);
 
-            // Fetch scores query
+            // Fetch scores query (Bypass Cache Server)
             const qScores = query(collection(dbFirestore, 'scores'), where('tanggal', '<', firestoreCutoff));
-            const scoresSnap = await getDocs(qScores);
+            const scoresSnap = await getDocsFromServer(qScores);
 
-            // Fetch remedial query
+            // Fetch remedial query (Bypass Cache Server)
             const qRemedial = query(collection(dbFirestore, 'remedial_exams'), where('tanggal', '<', firestoreCutoff));
-            const remedialSnap = await getDocs(qRemedial);
+            const remedialSnap = await getDocsFromServer(qRemedial);
 
             const deletePromises = [];
             let deletedScores = 0;

@@ -1086,12 +1086,12 @@
                     }
                 }
 
-                // 2. Ambil data hasil ujian dari Firestore
+                // 2. Ambil data hasil ujian dari Firestore (Bypass Cache Server)
                 showSyncStatus("Memindai database ujian di Firestore (remedial_exams)...");
-                var remedialSnap = await dbFirestore.collection('remedial_exams').get();
+                var remedialSnap = await dbFirestore.collection('remedial_exams').get({ source: 'server' });
                 
                 showSyncStatus("Memindai database latihan/ujian di Firestore (scores)...");
-                var scoresSnap = await dbFirestore.collection('scores').get();
+                var scoresSnap = await dbFirestore.collection('scores').get({ source: 'server' });
 
                 var addedCount = 0;
                 var firestoreUpdatePromises = [];
@@ -1243,8 +1243,8 @@
                     return ops[op] || op;
                 }
 
-                // Fetch all scores
-                var scoresSnap = await dbFirestore.collection('scores').get();
+                // Fetch all scores (Bypass Cache Server)
+                var scoresSnap = await dbFirestore.collection('scores').get({ source: 'server' });
                 var scoresData = [];
                 scoresSnap.forEach(function(doc) {
                     var d = doc.data();
@@ -1265,8 +1265,8 @@
                     });
                 });
 
-                // Fetch all remedial exams
-                var remedialSnap = await dbFirestore.collection('remedial_exams').get();
+                // Fetch all remedial exams (Bypass Cache Server)
+                var remedialSnap = await dbFirestore.collection('remedial_exams').get({ source: 'server' });
                 var remedialData = [];
                 remedialSnap.forEach(function(doc) {
                     var d = doc.data();
@@ -1339,15 +1339,15 @@
                 // Query scores & remedial_exams where tanggal < cutoffDate
                 var firestoreCutoff = firebase.firestore.Timestamp.fromDate(cutoffDate);
 
-                // Fetch scores before cutoff
+                // Fetch scores before cutoff (Bypass Cache Server)
                 var scoresSnap = await dbFirestore.collection('scores')
                     .where('tanggal', '<', firestoreCutoff)
-                    .get();
+                    .get({ source: 'server' });
 
-                // Fetch remedial_exams before cutoff
+                // Fetch remedial_exams before cutoff (Bypass Cache Server)
                 var remedialSnap = await dbFirestore.collection('remedial_exams')
                     .where('tanggal', '<', firestoreCutoff)
-                    .get();
+                    .get({ source: 'server' });
 
                 var deletePromises = [];
                 var deletedScores = 0;
