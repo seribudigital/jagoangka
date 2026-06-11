@@ -39,6 +39,55 @@
             border-color: #38bdf8;
             box-shadow: 0 0 0 1px #38bdf8;
         }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #modal-remedial, #modal-remedial * {
+                visibility: visible;
+            }
+            #modal-remedial {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: auto;
+                background: white !important;
+                color: black !important;
+                z-index: 9999;
+                backdrop-filter: none !important;
+                border: none !important;
+                box-shadow: none !important;
+                display: block !important;
+            }
+            #modal-remedial .glass-effect {
+                background: white !important;
+                color: black !important;
+                border: none !important;
+                box-shadow: none !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 0 !important;
+            }
+            #btn-close-modal, #btn-print-remedial, #btn-close-modal-footer, #modal-remedial .tabs-container {
+                display: none !important;
+            }
+            #modal-remedial h3, #modal-remedial h4, #modal-remedial p, #modal-remedial span, #modal-remedial td, #modal-remedial th {
+                color: black !important;
+            }
+            #modal-remedial .bg-brand-dark\/40 {
+                background: #f1f5f9 !important;
+                border: 1px solid #cbd5e1 !important;
+            }
+            #modal-remedial th {
+                border-bottom: 2px solid #cbd5e1 !important;
+                color: #475569 !important;
+            }
+            #modal-remedial tr {
+                border-bottom: 1px solid #e2e8f0 !important;
+            }
+        }
     </style>
 </head>
 
@@ -51,6 +100,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <!-- Header -->
     <header class="w-full p-6 flex justify-between items-center bg-brand-surface/50 border-b border-brand-border/50 backdrop-blur-md sticky top-0 z-50">
@@ -172,6 +222,48 @@
                 </div>
             </div>
         </section>
+
+        <!-- Remedial Raport Modal -->
+        <div id="modal-remedial" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden">
+            <div class="glass-effect w-full max-w-4xl rounded-3xl p-6 md:p-8 relative flex flex-col max-h-[90vh]">
+                <!-- Close Button -->
+                <button id="btn-close-modal" class="absolute top-4 right-4 text-slate-400 hover:text-white text-2xl font-bold p-2 transition-colors">&times;</button>
+                
+                <!-- Modal Header -->
+                <div class="mb-6 border-b border-brand-border/50 pb-4">
+                    <h3 class="text-2xl font-bold text-brand-text">Raport Remedial Siswa</h3>
+                    <p id="remedial-modal-subtitle" class="text-brand-text-muted text-sm mt-1">Siswa: - | Kelas: -</p>
+                </div>
+
+                <!-- Tabs to switch between Integer and Decimal -->
+                <div class="flex gap-2 mb-6 border-b border-brand-border/30 pb-3 tabs-container">
+                    <button id="tab-remedial-integer" class="px-4 py-2 rounded-lg text-sm font-semibold bg-brand-primary text-brand-text hover:bg-brand-primary/90 transition-all">
+                        Bilangan Bulat
+                    </button>
+                    <button id="tab-remedial-decimal" class="px-4 py-2 rounded-lg text-sm font-semibold bg-brand-surface border border-brand-border text-slate-300 hover:bg-brand-surface/80 transition-all">
+                        Bilangan Desimal
+                    </button>
+                </div>
+
+                <!-- Content Area -->
+                <div class="overflow-y-auto flex-1 pr-2 space-y-6" id="remedial-modal-content">
+                    <!-- Grid for cards -->
+                    <div id="remedial-modal-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Card elements will be generated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Print & Close button at the bottom -->
+                <div class="mt-6 pt-4 border-t border-brand-border/50 flex justify-end gap-3">
+                    <button id="btn-print-remedial" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-sm">
+                         Cetak Raport
+                    </button>
+                    <button id="btn-close-modal-footer" class="bg-brand-surface hover:bg-brand-surface/80 border border-brand-border text-brand-text font-semibold px-4 py-2 rounded-xl transition-all text-sm">
+                        Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
     </main>
 
     <script>
@@ -189,6 +281,7 @@
     const app = firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
+    const dbFirestore = firebase.firestore();
 
     // ===== DOM ELEMENTS =====
     const els = {
@@ -613,7 +706,10 @@
             tr.className = "hover:bg-brand-surface/50 transition-colors";
             tr.innerHTML = '<td class="px-6 py-4 font-medium">' + name + '</td>' +
                 '<td class="px-6 py-4"><span class="px-2 py-1 rounded text-xs font-bold ' + (isDefault ? 'bg-orange-500/20 text-orange-400' : 'bg-green-500/20 text-green-400') + '">' + currentPin + '</span></td>' +
-                '<td class="px-6 py-4 text-right"><button class="btn-reset-pin text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition-colors text-white" data-class="' + selectedClass + '" data-name="' + name + '">Reset (1234)</button></td>';
+                '<td class="px-6 py-4 text-right">' +
+                '<button class="btn-view-remedial text-xs bg-brand-primary hover:bg-brand-primary/80 px-3 py-1.5 rounded transition-colors text-white mr-2" data-class="' + selectedClass + '" data-name="' + name + '">Lihat Raport</button>' +
+                '<button class="btn-reset-pin text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition-colors text-white" data-class="' + selectedClass + '" data-name="' + name + '">Reset (1234)</button>' +
+                '</td>';
             els.tableAdminStudents.appendChild(tr);
         });
         
@@ -635,6 +731,212 @@
                 }
             });
         });
+
+        document.querySelectorAll('.btn-view-remedial').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                var cls = e.currentTarget.getAttribute('data-class');
+                var nm = e.currentTarget.getAttribute('data-name');
+                openRemedialModal(cls, nm);
+            });
+        });
+    });
+
+    // ===== REMEDIAL REPORT MODAL LOGIC =====
+    var currentRemedialStudent = { name: '', class: '' };
+    var currentRemedialType = 'integer';
+    var cachedRemedialExams = [];
+
+    async function openRemedialModal(className, studentName) {
+        currentRemedialStudent = { name: studentName, class: className };
+        currentRemedialType = 'integer';
+        
+        var subtitleEl = document.getElementById('remedial-modal-subtitle');
+        if (subtitleEl) {
+            subtitleEl.textContent = 'Siswa: ' + studentName + ' | Kelas: ' + className;
+        }
+        
+        var gridEl = document.getElementById('remedial-modal-grid');
+        if (gridEl) {
+            gridEl.innerHTML = '<div class="col-span-full text-center py-12 text-brand-text-muted">Mengambil data ujian remedial dari server...</div>';
+        }
+        
+        updateTabStyles();
+        
+        var modal = document.getElementById('modal-remedial');
+        if (modal) {
+            modal.classList.remove('hidden');
+        }
+        
+        try {
+            if (typeof dbFirestore === 'undefined') {
+                throw new Error("Firestore tidak terinisialisasi.");
+            }
+            
+            var querySnapshot = await dbFirestore.collection('remedial_exams')
+                .where('nama', '==', studentName)
+                .where('kelasRaw', '==', className)
+                .get();
+                
+            cachedRemedialExams = [];
+            querySnapshot.forEach(function(doc) {
+                cachedRemedialExams.push(doc.data());
+            });
+            
+            renderRemedialGrid();
+        } catch(err) {
+            console.error("Gagal memuat data remedial:", err);
+            if (gridEl) {
+                gridEl.innerHTML = '<div class="col-span-full text-center py-12 text-red-400">Gagal mengambil data dari server: ' + err.message + '</div>';
+            }
+        }
+    }
+
+    function renderRemedialGrid() {
+        var gridEl = document.getElementById('remedial-modal-grid');
+        if (!gridEl) return;
+        
+        gridEl.innerHTML = '';
+        
+        var targetOps = [];
+        var opTitles = {};
+        
+        if (currentRemedialType === 'decimal') {
+            targetOps = ['decimal_add', 'decimal_subtract', 'decimal_multiply', 'decimal_divide'];
+            opTitles = {
+                decimal_add: { title: 'Penjumlahan Desimal', color: 'text-brand-accent' },
+                decimal_subtract: { title: 'Pengurangan Desimal', color: 'text-indigo-400' },
+                decimal_multiply: { title: 'Perkalian Desimal', color: 'text-brand-primary' },
+                decimal_divide: { title: 'Pembagian Desimal', color: 'text-brand-secondary' }
+            };
+        } else {
+            targetOps = ['multiply', 'divide', 'add', 'subtract'];
+            opTitles = {
+                multiply: { title: 'Perkalian', color: 'text-brand-primary' },
+                divide: { title: 'Pembagian', color: 'text-brand-secondary' },
+                add: { title: 'Penjumlahan', color: 'text-brand-accent' },
+                subtract: { title: 'Pengurangan', color: 'text-indigo-400' }
+            };
+        }
+        
+        var grouped = {};
+        targetOps.forEach(function(op) {
+            grouped[op] = [];
+        });
+        
+        cachedRemedialExams.forEach(function(ex) {
+            var op = ex.tipeOperasi;
+            if (grouped[op] !== undefined) {
+                grouped[op].push(ex);
+            }
+        });
+        
+        var resultGroup = {};
+        targetOps.forEach(function(op) {
+            grouped[op].sort(function(a, b) {
+                var timeA = a.tanggal && typeof a.tanggal.toDate === 'function' ? a.tanggal.toDate().getTime() : (a.tanggal ? new Date(a.tanggal).getTime() : 0);
+                var timeB = b.tanggal && typeof b.tanggal.toDate === 'function' ? b.tanggal.toDate().getTime() : (b.tanggal ? new Date(b.tanggal).getTime() : 0);
+                return timeB - timeA;
+            });
+            resultGroup[op] = grouped[op].slice(0, 3);
+        });
+        
+        targetOps.forEach(function(op) {
+            var list = resultGroup[op];
+            var info = opTitles[op];
+            
+            var card = document.createElement('div');
+            card.className = "bg-brand-dark/40 border border-brand-border rounded-xl p-5 flex flex-col gap-3 min-h-[160px]";
+            
+            var contentHTML = '<h4 class="font-bold text-brand-text border-b border-brand-border/50 pb-2 flex items-center justify-between">' +
+                '<span>' + info.title + '</span>' +
+                '<span class="text-xs ' + info.color + ' font-bold uppercase tracking-wider">3 Terakhir</span>' +
+                '</h4>';
+            
+            if (list.length === 0) {
+                contentHTML += '<div class="flex-1 flex items-center justify-center py-6">' +
+                    '<p class="text-brand-text-muted text-sm italic">Belum ada riwayat ujian</p>' +
+                    '</div>';
+            } else {
+                contentHTML += '<table class="w-full text-xs text-left border-collapse">' +
+                    '<thead>' +
+                    '<tr class="text-brand-text-muted border-b border-brand-border/30 uppercase tracking-wider font-semibold">' +
+                    '<th class="py-2">Tanggal</th>' +
+                    '<th class="py-2">Waktu Rerata</th>' +
+                    '<th class="py-2 text-right">Nilai</th>' +
+                    '</tr>' +
+                    '</thead>' +
+                    '<tbody class="text-brand-text font-medium">';
+                
+                list.forEach(function(ex) {
+                    var dateStr = ex.tanggal && typeof ex.tanggal.toDate === 'function' 
+                        ? ex.tanggal.toDate().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' }) 
+                        : (ex.tanggal ? new Date(ex.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' }) : '-');
+                    
+                    var normalizedScore = ex.skor;
+                    if (normalizedScore > 100) {
+                        normalizedScore = Math.round(normalizedScore / 5);
+                    }
+                    
+                    var avgTimeStr = ex.waktuRataRata ? parseFloat(ex.waktuRataRata).toFixed(1) + 's' : '-';
+                    
+                    contentHTML += '<tr class="border-b border-brand-border/20 last:border-0 hover:bg-brand-surface/30">' +
+                        '<td class="py-2">' + dateStr + '</td>' +
+                        '<td class="py-2">' + avgTimeStr + '</td>' +
+                        '<td class="py-2 text-right font-bold ' + info.color + '">' + normalizedScore + '</td>' +
+                        '</tr>';
+                });
+                
+                contentHTML += '</tbody></table>';
+            }
+            
+            card.innerHTML = contentHTML;
+            gridEl.appendChild(card);
+        });
+    }
+
+    function updateTabStyles() {
+        var tabInt = document.getElementById('tab-remedial-integer');
+        var tabDec = document.getElementById('tab-remedial-decimal');
+        if (!tabInt || !tabDec) return;
+        
+        if (currentRemedialType === 'integer') {
+            tabInt.className = "px-4 py-2 rounded-lg text-sm font-semibold bg-brand-primary text-brand-text hover:bg-brand-primary/90 transition-all";
+            tabDec.className = "px-4 py-2 rounded-lg text-sm font-semibold bg-brand-surface border border-brand-border text-slate-300 hover:bg-brand-surface/80 transition-all";
+        } else {
+            tabDec.className = "px-4 py-2 rounded-lg text-sm font-semibold bg-brand-primary text-brand-text hover:bg-brand-primary/90 transition-all";
+            tabInt.className = "px-4 py-2 rounded-lg text-sm font-semibold bg-brand-surface border border-brand-border text-slate-300 hover:bg-brand-surface/80 transition-all";
+        }
+    }
+
+    function closeRemedialModal() {
+        var modal = document.getElementById('modal-remedial');
+        if (modal) modal.classList.add('hidden');
+    }
+
+    // Register Modal Listeners
+    document.getElementById('btn-close-modal').addEventListener('click', closeRemedialModal);
+    document.getElementById('btn-close-modal-footer').addEventListener('click', closeRemedialModal);
+    document.getElementById('tab-remedial-integer').addEventListener('click', function() {
+        if (currentRemedialType !== 'integer') {
+            currentRemedialType = 'integer';
+            updateTabStyles();
+            renderRemedialGrid();
+        }
+    });
+    document.getElementById('tab-remedial-decimal').addEventListener('click', function() {
+        if (currentRemedialType !== 'decimal') {
+            currentRemedialType = 'decimal';
+            updateTabStyles();
+            renderRemedialGrid();
+        }
+    });
+    document.getElementById('btn-print-remedial').addEventListener('click', function() {
+        window.print();
+    });
+    document.getElementById('modal-remedial').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeRemedialModal();
+        }
     });
     </script>
 </body>
