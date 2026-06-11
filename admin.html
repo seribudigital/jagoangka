@@ -235,8 +235,56 @@
                                 <tr><td colspan="3" class="px-6 py-4 text-center text-brand-text-muted">Pilih kelas untuk melihat data.</td></tr>
                             </tbody>
                         </table>
+            <!-- Academic Year Management & Data Cleanup Section -->
+            <div class="glass-effect p-6 md:p-8 rounded-3xl mt-8">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold">Manajemen Tahun Ajaran & Pembersihan Data</h2>
+                        <p class="text-brand-text-muted text-sm mt-1">Kelola data riwayat ujian di Firestore dan daftar siswa di Realtime Database untuk pergantian tahun ajaran baru.</p>
                     </div>
                 </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Backup -->
+                    <div class="bg-brand-dark/40 border border-brand-border rounded-2xl p-5 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold text-brand-text mb-2">1. Backup Data Ujian</h3>
+                            <p class="text-xs text-brand-text-muted leading-relaxed mb-4">Unduh seluruh riwayat ujian siswa dari database Firestore ke format Excel (.xlsx) sebelum Anda melakukan penghapusan.</p>
+                        </div>
+                        <button id="btn-backup-data" class="w-full bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-brand-primary/30 font-bold px-4 py-2.5 rounded-xl transition-all">
+                            Unduh Backup Excel
+                        </button>
+                    </div>
+
+                    <!-- Clean Up Firestore -->
+                    <div class="bg-brand-dark/40 border border-brand-border rounded-2xl p-5 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold text-red-400 mb-2">2. Bersihkan Riwayat Ujian</h3>
+                            <p class="text-xs text-brand-text-muted leading-relaxed mb-4">Hapus riwayat ujian dan remedial siswa lama dari Firestore. Pilih tanggal cutoff; data sebelum tanggal tersebut akan dihapus.</p>
+                            
+                            <div class="mt-2 mb-4">
+                                <label for="input-cleanup-date" class="block text-xs text-brand-text-muted mb-1">Hapus Data Sebelum Tanggal:</label>
+                                <input type="date" id="input-cleanup-date" class="w-full bg-brand-surface/50 border border-brand-border rounded-lg px-3 py-1.5 text-sm text-brand-text focus:outline-none focus:border-brand-primary">
+                            </div>
+                        </div>
+                        <button id="btn-cleanup-old-data" class="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold px-4 py-2.5 rounded-xl transition-all">
+                            Hapus Riwayat Lama
+                        </button>
+                    </div>
+
+                    <!-- Reset Students Database -->
+                    <div class="bg-brand-dark/40 border border-brand-border rounded-2xl p-5 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold text-red-400 mb-2">3. Reset Daftar Siswa</h3>
+                            <p class="text-xs text-brand-text-muted leading-relaxed mb-4">Kosongkan daftar seluruh kelas, nama, dan PIN di Realtime Database. Siswa lama harus mendaftar kembali atau di-import ulang.</p>
+                        </div>
+                        <button id="btn-reset-students-db" class="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold px-4 py-2.5 rounded-xl transition-all">
+                            Kosongkan Daftar Siswa
+                        </button>
+                    </div>
+                </div>
+
+                <p id="cleanup-status" class="text-sm font-medium hidden mt-4"></p>
             </div>
         </section>
 
@@ -1149,6 +1197,197 @@
             } finally {
                 btnSync.disabled = false;
                 btnSync.textContent = originalText;
+            }
+        });
+    }
+
+    // ===== ACADEMIC YEAR MANAGEMENT & DATA CLEANUP =====
+    var btnBackup = document.getElementById('btn-backup-data');
+    var btnCleanup = document.getElementById('btn-cleanup-old-data');
+    var btnResetStudents = document.getElementById('btn-reset-students-db');
+    var inputCleanupDate = document.getElementById('input-cleanup-date');
+    var cleanupStatus = document.getElementById('cleanup-status');
+
+    // Set default cutoff date to June 1, 2026
+    if (inputCleanupDate) {
+        inputCleanupDate.value = "2026-06-01";
+    }
+
+    function showCleanupStatus(msg, isError) {
+        if (!cleanupStatus) return;
+        cleanupStatus.textContent = msg;
+        cleanupStatus.className = 'text-sm font-medium mt-4 ' + (isError ? 'text-red-400' : 'text-brand-accent');
+        cleanupStatus.classList.remove('hidden');
+    }
+
+    if (btnBackup) {
+        btnBackup.addEventListener('click', async function() {
+            btnBackup.disabled = true;
+            var originalText = btnBackup.textContent;
+            btnBackup.textContent = "Mengunduh...";
+            showCleanupStatus("Mengambil data untuk di-backup...");
+            try {
+                // Fetch all scores
+                var scoresSnap = await dbFirestore.collection('scores').get();
+                var scoresData = [];
+                scoresSnap.forEach(function(doc) {
+                    var d = doc.data();
+                    var dateStr = d.tanggal && typeof d.tanggal.toDate === 'function' 
+                        ? d.tanggal.toDate().toISOString() 
+                        : (d.tanggal ? new Date(d.tanggal).toISOString() : '-');
+                    scoresData.push({
+                        "ID Dokumen": doc.id,
+                        "Nama Siswa": d.nama || '',
+                        "Kelas": d.kelasRaw || '',
+                        "Kategori Kelas": d.kelasKategori || '',
+                        "Nilai": d.nilai || 0,
+                        "Tanggal Ujian": dateStr,
+                        "Operasi": d.modeOp || '',
+                        "Mode Game": d.gameMode || ''
+                    });
+                });
+
+                // Fetch all remedial exams
+                var remedialSnap = await dbFirestore.collection('remedial_exams').get();
+                var remedialData = [];
+                remedialSnap.forEach(function(doc) {
+                    var d = doc.data();
+                    var dateStr = d.tanggal && typeof d.tanggal.toDate === 'function' 
+                        ? d.tanggal.toDate().toISOString() 
+                        : (d.tanggal ? new Date(d.tanggal).toISOString() : '-');
+                    remedialData.push({
+                        "ID Dokumen": doc.id,
+                        "Nama Siswa": d.nama || '',
+                        "Kelas": d.kelasRaw || '',
+                        "Kategori Kelas": d.kelasKategori || '',
+                        "Tanggal Remedial": dateStr,
+                        "Status": d.status || '',
+                        "Jenis Ujian": d.examType || '',
+                        "Nilai Akhir": d.finalScore || 0,
+                        "Jumlah Soal": d.questionsCount || 0
+                    });
+                });
+
+                if (scoresData.length === 0 && remedialData.length === 0) {
+                    showCleanupStatus("Tidak ada data hasil ujian untuk di-backup.", true);
+                    return;
+                }
+
+                // Create spreadsheet using SheetJS (XLSX)
+                var wb = XLSX.utils.book_new();
+                var wsScores = XLSX.utils.json_to_sheet(scoresData);
+                var wsRemedial = XLSX.utils.json_to_sheet(remedialData);
+                XLSX.utils.book_append_sheet(wb, wsScores, "Nilai Utama");
+                XLSX.utils.book_append_sheet(wb, wsRemedial, "Ujian Remedial");
+
+                var fileName = "jagoangka_backup_" + new Date().toISOString().slice(0, 10) + ".xlsx";
+                XLSX.writeFile(wb, fileName);
+                showCleanupStatus("✅ Backup berhasil diunduh sebagai " + fileName, false);
+            } catch (err) {
+                console.error("Gagal melakukan backup:", err);
+                showCleanupStatus("Gagal melakukan backup: " + err.message, true);
+            } finally {
+                btnBackup.disabled = false;
+                btnBackup.textContent = originalText;
+            }
+        });
+    }
+
+    if (btnCleanup) {
+        btnCleanup.addEventListener('click', async function() {
+            var dateVal = inputCleanupDate.value;
+            if (!dateVal) {
+                alert("Pilih tanggal cutoff terlebih dahulu!");
+                return;
+            }
+
+            var cutoffDate = new Date(dateVal);
+            var dateDisplay = cutoffDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            
+            var confirmMsg = "PERINGATAN! Anda akan menghapus semua riwayat hasil ujian dan remedial yang dilakukan SEBELUM " + dateDisplay + " secara permanen.\n\nTindakan ini tidak dapat dibatalkan. Pastikan Anda sudah mengunduh Backup Excel terlebih dahulu.\n\nKetik 'HAPUS' untuk mengonfirmasi:";
+            var confirmInput = prompt(confirmMsg);
+            if (confirmInput !== "HAPUS") {
+                alert("Konfirmasi dibatalkan. Tidak ada data yang dihapus.");
+                return;
+            }
+
+            btnCleanup.disabled = true;
+            var originalText = btnCleanup.textContent;
+            btnCleanup.textContent = "Menghapus...";
+            showCleanupStatus("Memproses pembersihan riwayat...");
+
+            try {
+                // Query scores & remedial_exams where tanggal < cutoffDate
+                var firestoreCutoff = firebase.firestore.Timestamp.fromDate(cutoffDate);
+
+                // Fetch scores before cutoff
+                var scoresSnap = await dbFirestore.collection('scores')
+                    .where('tanggal', '<', firestoreCutoff)
+                    .get();
+
+                // Fetch remedial_exams before cutoff
+                var remedialSnap = await dbFirestore.collection('remedial_exams')
+                    .where('tanggal', '<', firestoreCutoff)
+                    .get();
+
+                var deletePromises = [];
+                var deletedScores = 0;
+                var deletedRemedial = 0;
+
+                scoresSnap.forEach(function(doc) {
+                    deletePromises.push(doc.ref.delete());
+                    deletedScores++;
+                });
+
+                remedialSnap.forEach(function(doc) {
+                    deletePromises.push(doc.ref.delete());
+                    deletedRemedial++;
+                });
+
+                if (deletePromises.length === 0) {
+                    showCleanupStatus("✅ Tidak ditemukan data riwayat sebelum tanggal " + dateDisplay + " untuk dihapus.", false);
+                    return;
+                }
+
+                showCleanupStatus("Sedang menghapus " + deletePromises.length + " dokumen di Firestore...");
+                await Promise.all(deletePromises);
+                showCleanupStatus("✅ Berhasil menghapus " + deletedScores + " data nilai utama dan " + deletedRemedial + " data ujian remedial sebelum tanggal " + dateDisplay + "!", false);
+            } catch (err) {
+                console.error("Gagal membersihkan riwayat:", err);
+                showCleanupStatus("Gagal membersihkan riwayat: " + err.message, true);
+            } finally {
+                btnCleanup.disabled = false;
+                btnCleanup.textContent = originalText;
+            }
+        });
+    }
+
+    if (btnResetStudents) {
+        btnResetStudents.addEventListener('click', async function() {
+            var confirmMsg = "PERINGATAN! Anda akan menghapus seluruh daftar kelas, nama siswa, dan PIN di Realtime Database secara permanen.\n\nSiswa yang sedang aktif tidak akan bisa login sampai didaftarkan kembali.\n\nKetik 'RESET SISWA' untuk mengonfirmasi:";
+            var confirmInput = prompt(confirmMsg);
+            if (confirmInput !== "RESET SISWA") {
+                alert("Konfirmasi dibatalkan. Tidak ada data siswa yang di-reset.");
+                return;
+            }
+
+            btnResetStudents.disabled = true;
+            var originalText = btnResetStudents.textContent;
+            btnResetStudents.textContent = "Mereset...";
+            showCleanupStatus("Mereset daftar siswa di Realtime Database...");
+
+            try {
+                await db.ref('appConfig/students').set(null);
+                showCleanupStatus("✅ Berhasil mengosongkan seluruh daftar siswa dan PIN di database!", false);
+                
+                // Refresh data di tabel admin
+                loadAdminStudents();
+            } catch (err) {
+                console.error("Gagal mereset siswa:", err);
+                showCleanupStatus("Gagal mereset siswa: " + err.message, true);
+            } finally {
+                btnResetStudents.disabled = false;
+                btnResetStudents.textContent = originalText;
             }
         });
     }

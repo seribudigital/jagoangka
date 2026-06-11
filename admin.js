@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 import { getDatabase, ref, get, set } from "firebase/database";
-import { getFirestore, collection, getDocs, doc, updateDoc } from "firebase/firestore";
+import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, query, where, Timestamp } from "firebase/firestore";
 
 const firebaseConfig = {
     apiKey: atob("QUl6YVN5RGJBeXNtUVJrSUFUWE1JVnNJYWY4ZWktcUo0cWM5QzBr"),
@@ -46,7 +46,12 @@ const els = {
     selectAdminClass: document.getElementById('select-admin-class'),
     tableAdminStudents: document.getElementById('table-admin-students'),
     btnSyncStudents: document.getElementById('btn-sync-students'),
-    syncStatus: document.getElementById('sync-status')
+    syncStatus: document.getElementById('sync-status'),
+    btnBackupData: document.getElementById('btn-backup-data'),
+    btnCleanupOldData: document.getElementById('btn-cleanup-old-data'),
+    btnResetStudentsDb: document.getElementById('btn-reset-students-db'),
+    inputCleanupDate: document.getElementById('input-cleanup-date'),
+    cleanupStatus: document.getElementById('cleanup-status')
 };
 
 let adminStudentData = {};
@@ -690,3 +695,184 @@ els.selectAdminClass.addEventListener('change', () => {
         });
     });
 });
+
+// ===== ACADEMIC YEAR MANAGEMENT & DATA CLEANUP =====
+if (els.inputCleanupDate) {
+    els.inputCleanupDate.value = "2026-06-01";
+}
+
+function showCleanupStatus(msg, isError) {
+    if (!els.cleanupStatus) return;
+    els.cleanupStatus.textContent = msg;
+    els.cleanupStatus.className = 'text-sm font-medium mt-4 ' + (isError ? 'text-red-400' : 'text-brand-accent');
+    els.cleanupStatus.classList.remove('hidden');
+}
+
+if (els.btnBackupData) {
+    els.btnBackupData.addEventListener('click', async () => {
+        els.btnBackupData.disabled = true;
+        const originalText = els.btnBackupData.textContent;
+        els.btnBackupData.textContent = "Mengunduh...";
+        showCleanupStatus("Mengambil data untuk di-backup...");
+        
+        try {
+            // Fetch all scores
+            const scoresSnap = await getDocs(collection(dbFirestore, 'scores'));
+            const scoresData = [];
+            scoresSnap.forEach(docSnap => {
+                const d = docSnap.data();
+                const dateStr = d.tanggal && typeof d.tanggal.toDate === 'function'
+                    ? d.tanggal.toDate().toISOString()
+                    : (d.tanggal ? new Date(d.tanggal).toISOString() : '-');
+                scoresData.push({
+                    "ID Dokumen": docSnap.id,
+                    "Nama Siswa": d.nama || '',
+                    "Kelas": d.kelasRaw || '',
+                    "Kategori Kelas": d.kelasKategori || '',
+                    "Nilai": d.nilai || 0,
+                    "Tanggal Ujian": dateStr,
+                    "Operasi": d.modeOp || '',
+                    "Mode Game": d.gameMode || ''
+                });
+            });
+
+            // Fetch all remedial exams
+            const remedialSnap = await getDocs(collection(dbFirestore, 'remedial_exams'));
+            const remedialData = [];
+            remedialSnap.forEach(docSnap => {
+                const d = docSnap.data();
+                const dateStr = d.tanggal && typeof d.tanggal.toDate === 'function'
+                    ? d.tanggal.toDate().toISOString()
+                    : (d.tanggal ? new Date(d.tanggal).toISOString() : '-');
+                remedialData.push({
+                    "ID Dokumen": docSnap.id,
+                    "Nama Siswa": d.nama || '',
+                    "Kelas": d.kelasRaw || '',
+                    "Kategori Kelas": d.kelasKategori || '',
+                    "Tanggal Remedial": dateStr,
+                    "Status": d.status || '',
+                    "Jenis Ujian": d.examType || '',
+                    "Nilai Akhir": d.finalScore || 0,
+                    "Jumlah Soal": d.questionsCount || 0
+                });
+            });
+
+            if (scoresData.length === 0 && remedialData.length === 0) {
+                showCleanupStatus("Tidak ada data hasil ujian untuk di-backup.", true);
+                return;
+            }
+
+            // Create spreadsheet using SheetJS
+            const wb = XLSX.utils.book_new();
+            const wsScores = XLSX.utils.json_to_sheet(scoresData);
+            const wsRemedial = XLSX.utils.json_to_sheet(remedialData);
+            XLSX.utils.book_append_sheet(wb, wsScores, "Nilai Utama");
+            XLSX.utils.book_append_sheet(wb, wsRemedial, "Ujian Remedial");
+
+            const fileName = `jagoangka_backup_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            showCleanupStatus(`✅ Backup berhasil diunduh sebagai ${fileName}`, false);
+        } catch (err) {
+            console.error("Gagal melakukan backup:", err);
+            showCleanupStatus(`Gagal melakukan backup: ${err.message}`, true);
+        } finally {
+            els.btnBackupData.disabled = false;
+            els.btnBackupData.textContent = originalText;
+        }
+    });
+}
+
+if (els.btnCleanupOldData) {
+    els.btnCleanupOldData.addEventListener('click', async () => {
+        const dateVal = els.inputCleanupDate.value;
+        if (!dateVal) {
+            alert("Pilih tanggal cutoff terlebih dahulu!");
+            return;
+        }
+
+        const cutoffDate = new Date(dateVal);
+        const dateDisplay = cutoffDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        
+        const confirmMsg = `PERINGATAN! Anda akan menghapus semua riwayat hasil ujian dan remedial yang dilakukan SEBELUM ${dateDisplay} secara permanen.\n\nTindakan ini tidak dapat dibatalkan. Pastikan Anda sudah mengunduh Backup Excel terlebih dahulu.\n\nKetik 'HAPUS' untuk mengonfirmasi:`;
+        const confirmInput = prompt(confirmMsg);
+        if (confirmInput !== "HAPUS") {
+            alert("Konfirmasi dibatalkan. Tidak ada data yang dihapus.");
+            return;
+        }
+
+        els.btnCleanupOldData.disabled = true;
+        const originalText = els.btnCleanupOldData.textContent;
+        els.btnCleanupOldData.textContent = "Menghapus...";
+        showCleanupStatus("Memproses pembersihan riwayat...");
+
+        try {
+            const firestoreCutoff = Timestamp.fromDate(cutoffDate);
+
+            // Fetch scores query
+            const qScores = query(collection(dbFirestore, 'scores'), where('tanggal', '<', firestoreCutoff));
+            const scoresSnap = await getDocs(qScores);
+
+            // Fetch remedial query
+            const qRemedial = query(collection(dbFirestore, 'remedial_exams'), where('tanggal', '<', firestoreCutoff));
+            const remedialSnap = await getDocs(qRemedial);
+
+            const deletePromises = [];
+            let deletedScores = 0;
+            let deletedRemedial = 0;
+
+            scoresSnap.forEach(docSnap => {
+                deletePromises.push(deleteDoc(doc(dbFirestore, 'scores', docSnap.id)));
+                deletedScores++;
+            });
+
+            remedialSnap.forEach(docSnap => {
+                deletePromises.push(deleteDoc(doc(dbFirestore, 'remedial_exams', docSnap.id)));
+                deletedRemedial++;
+            });
+
+            if (deletePromises.length === 0) {
+                showCleanupStatus(`✅ Tidak ditemukan data riwayat sebelum tanggal ${dateDisplay} untuk dihapus.`, false);
+                return;
+            }
+
+            showCleanupStatus(`Sedang menghapus ${deletePromises.length} dokumen di Firestore...`);
+            await Promise.all(deletePromises);
+            showCleanupStatus(`✅ Berhasil menghapus ${deletedScores} data nilai utama dan ${deletedRemedial} data ujian remedial sebelum tanggal ${dateDisplay}!`, false);
+        } catch (err) {
+            console.error("Gagal membersihkan riwayat:", err);
+            showCleanupStatus(`Gagal membersihkan riwayat: ${err.message}`, true);
+        } finally {
+            els.btnCleanupOldData.disabled = false;
+            els.btnCleanupOldData.textContent = originalText;
+        }
+    });
+}
+
+if (els.btnResetStudentsDb) {
+    els.btnResetStudentsDb.addEventListener('click', async () => {
+        const confirmMsg = "PERINGATAN! Anda akan menghapus seluruh daftar kelas, nama siswa, dan PIN di Realtime Database secara permanen.\n\nSiswa yang sedang aktif tidak akan bisa login sampai didaftarkan kembali.\n\nKetik 'RESET SISWA' untuk mengonfirmasi:";
+        const confirmInput = prompt(confirmMsg);
+        if (confirmInput !== "RESET SISWA") {
+            alert("Konfirmasi dibatalkan. Tidak ada data siswa yang di-reset.");
+            return;
+        }
+
+        els.btnResetStudentsDb.disabled = true;
+        const originalText = els.btnResetStudentsDb.textContent;
+        els.btnResetStudentsDb.textContent = "Mereset...";
+        showCleanupStatus("Mereset daftar siswa di Realtime Database...");
+
+        try {
+            await set(ref(db, 'appConfig/students'), null);
+            showCleanupStatus("✅ Berhasil mengosongkan seluruh daftar siswa dan PIN di database!", false);
+            loadAdminStudents();
+        } catch (err) {
+            console.error("Gagal mereset siswa:", err);
+            showCleanupStatus(`Gagal mereset siswa: ${err.message}`, true);
+        } finally {
+            els.btnResetStudentsDb.disabled = false;
+            els.btnResetStudentsDb.textContent = originalText;
+        }
+    });
+}
+
