@@ -716,6 +716,22 @@ if (els.btnBackupData) {
         showCleanupStatus("Mengambil data untuk di-backup...");
         
         try {
+            // Helper for operation formatting
+            const formatTipeOperasi = (op) => {
+                if (!op) return '-';
+                const ops = {
+                    'multiply': 'Perkalian',
+                    'divide': 'Pembagian',
+                    'add': 'Penjumlahan',
+                    'subtract': 'Pengurangan',
+                    'decimal_add': 'Penjumlahan Desimal',
+                    'decimal_subtract': 'Pengurangan Desimal',
+                    'decimal_multiply': 'Perkalian Desimal',
+                    'decimal_divide': 'Pembagian Desimal'
+                };
+                return ops[op] || op;
+            };
+
             // Fetch all scores
             const scoresSnap = await getDocs(collection(dbFirestore, 'scores'));
             const scoresData = [];
@@ -729,10 +745,12 @@ if (els.btnBackupData) {
                     "Nama Siswa": d.nama || '',
                     "Kelas": d.kelasRaw || '',
                     "Kategori Kelas": d.kelasKategori || '',
-                    "Nilai": d.nilai || 0,
+                    "Skor / Nilai": d.skor !== undefined ? d.skor : 0,
                     "Tanggal Ujian": dateStr,
-                    "Operasi": d.modeOp || '',
-                    "Mode Game": d.gameMode || ''
+                    "Operasi": formatTipeOperasi(d.tipeOperasi),
+                    "Mode Game": d.mode === 'exam' ? 'Ujian' : 'Latihan',
+                    "Waktu Total (detik)": d.waktuTotal || 0,
+                    "Waktu Rata-rata (detik)": d.waktuRataRata || 0
                 });
             });
 
@@ -749,11 +767,12 @@ if (els.btnBackupData) {
                     "Nama Siswa": d.nama || '',
                     "Kelas": d.kelasRaw || '',
                     "Kategori Kelas": d.kelasKategori || '',
-                    "Tanggal Remedial": dateStr,
-                    "Status": d.status || '',
-                    "Jenis Ujian": d.examType || '',
-                    "Nilai Akhir": d.finalScore || 0,
-                    "Jumlah Soal": d.questionsCount || 0
+                    "Skor / Nilai": d.skor !== undefined ? d.skor : 0,
+                    "Tanggal Ujian": dateStr,
+                    "Operasi": formatTipeOperasi(d.tipeOperasi),
+                    "Mode Game": d.mode === 'exam' ? 'Ujian' : 'Latihan',
+                    "Waktu Total (detik)": d.waktuTotal || 0,
+                    "Waktu Rata-rata (detik)": d.waktuRataRata || 0
                 });
             });
 
