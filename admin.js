@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 import { getDatabase, ref, get, set } from "firebase/database";
+import { getFirestore, collection, getDocs } from "firebase/firestore";
 
 const firebaseConfig = {
     apiKey: atob("QUl6YVN5RGJBeXNtUVJrSUFUWE1JVnNJYWY4ZWktcUo0cWM5QzBr"),
@@ -15,6 +16,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
+const dbFirestore = getFirestore(app);
 
 const els = {
     screenLogin: document.getElementById('screen-login'),
@@ -32,7 +34,9 @@ const els = {
     checkResetStudents: document.getElementById('check-reset-students'),
     importStatus: document.getElementById('import-status'),
     selectAdminClass: document.getElementById('select-admin-class'),
-    tableAdminStudents: document.getElementById('table-admin-students')
+    tableAdminStudents: document.getElementById('table-admin-students'),
+    btnSyncStudents: document.getElementById('btn-sync-students'),
+    syncStatus: document.getElementById('sync-status')
 };
 
 let adminStudentData = {};
@@ -384,6 +388,121 @@ els.btnImportStudents.addEventListener('click', async () => {
         els.btnImportStudents.disabled = false;
     }
 });
+
+// ===== SYNC STUDENTS FROM EXAMS =====
+function showSyncStatus(msg, isError = false) {
+    if (!els.syncStatus) return;
+    els.syncStatus.textContent = msg;
+    els.syncStatus.className = `text-sm font-medium mt-4 ${isError ? 'text-red-400' : 'text-brand-accent'}`;
+    els.syncStatus.classList.remove('hidden');
+}
+
+if (els.btnSyncStudents) {
+    els.btnSyncStudents.addEventListener('click', async () => {
+        els.btnSyncStudents.disabled = true;
+        const originalText = els.btnSyncStudents.textContent;
+        els.btnSyncStudents.textContent = "Sinkronisasi...";
+        showSyncStatus("Memulai sinkronisasi...");
+
+        try {
+            // 1. Ambil data Realtime Database terkini
+            const snap = await get(ref(db, 'appConfig/students'));
+            const currentStudents = {};
+            if (snap.exists()) {
+                const rawData = snap.val();
+                for (const kelas in rawData) {
+                    currentStudents[kelas] = {};
+                    const classData = rawData[kelas];
+                    if (Array.isArray(classData)) {
+                        classData.forEach(name => {
+                            if (name && typeof name === 'string') currentStudents[kelas][name] = "1234";
+                        });
+                    } else if (typeof classData === 'object') {
+                        for (const key in classData) {
+                            if (!isNaN(key)) {
+                                const name = classData[key];
+                                if (name && typeof name === 'string') currentStudents[kelas][name] = "1234";
+                            } else {
+                                currentStudents[kelas][key] = classData[key];
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Ambil data hasil ujian dari Firestore
+            showSyncStatus("Memindai database ujian di Firestore (remedial_exams)...");
+            const remedialSnap = await getDocs(collection(dbFirestore, 'remedial_exams'));
+            
+            showSyncStatus("Memindai database latihan/ujian di Firestore (scores)...");
+            const scoresSnap = await getDocs(collection(dbFirestore, 'scores'));
+
+            let addedCount = 0;
+
+            // 3. Proses hasil remedial_exams
+            remedialSnap.forEach(doc => {
+                const data = doc.data();
+                if (data && data.nama && data.kelasRaw) {
+                    const kelasVal = String(data.kelasRaw).replace(/\s+/g, '').toUpperCase();
+                    const namaVal = String(data.nama).trim();
+                    if (kelasVal && namaVal) {
+                        if (!currentStudents[kelasVal]) {
+                            currentStudents[kelasVal] = {};
+                        }
+                        if (!currentStudents[kelasVal][namaVal]) {
+                            currentStudents[kelasVal][namaVal] = "1234";
+                            addedCount++;
+                        }
+                    }
+                }
+            });
+
+            // 4. Proses hasil scores
+            scoresSnap.forEach(doc => {
+                const data = doc.data();
+                if (data && data.nama && data.kelasRaw) {
+                    const kelasVal = String(data.kelasRaw).replace(/\s+/g, '').toUpperCase();
+                    const namaVal = String(data.nama).trim();
+                    if (kelasVal && namaVal) {
+                        if (!currentStudents[kelasVal]) {
+                            currentStudents[kelasVal] = {};
+                        }
+                        if (!currentStudents[kelasVal][namaVal]) {
+                            currentStudents[kelasVal][namaVal] = "1234";
+                            addedCount++;
+                        }
+                    }
+                }
+            });
+
+            if (addedCount > 0) {
+                showSyncStatus("Mengurutkan data dan menyimpan...");
+                // Urutkan alfabetis
+                const sortedFinal = {};
+                Object.keys(currentStudents).sort().forEach(c => {
+                    sortedFinal[c] = {};
+                    Object.keys(currentStudents[c]).sort().forEach(n => {
+                        sortedFinal[c][n] = currentStudents[c][n];
+                    });
+                });
+
+                await set(ref(db, 'appConfig/students'), sortedFinal);
+                showSyncStatus(`✅ Sinkronisasi berhasil! Berhasil menambahkan ${addedCount} siswa lama ke daftar.`, false);
+                
+                // Refresh data di tabel admin
+                loadAdminStudents();
+            } else {
+                showSyncStatus("✅ Sinkronisasi selesai! Semua siswa di database hasil ujian sudah terdaftar di list PIN (tidak ada siswa baru yang perlu ditambahkan).", false);
+            }
+        } catch (err) {
+            console.error("Gagal sinkronisasi:", err);
+            showSyncStatus("Gagal sinkronisasi: " + err.message, true);
+        } finally {
+            els.btnSyncStudents.disabled = false;
+            els.btnSyncStudents.textContent = originalText;
+        }
+    });
+}
 
 // ===== ADMIN STUDENT MANAGEMENT (PIN RESET) =====
 async function loadAdminStudents() {
