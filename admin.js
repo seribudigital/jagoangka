@@ -741,12 +741,13 @@ if (els.btnBackupData) {
                     ? d.tanggal.toDate().toISOString()
                     : (d.tanggal ? new Date(d.tanggal).toISOString() : '-');
                 scoresData.push({
+                    "Tipe Ujian": "Utama",
                     "ID Dokumen": docSnap.id,
                     "Nama Siswa": d.nama || '',
                     "Kelas": d.kelasRaw || '',
                     "Kategori Kelas": d.kelasKategori || '',
                     "Skor / Nilai": d.skor !== undefined ? d.skor : 0,
-                    "Tanggal Ujian": dateStr,
+                    "Tanggal": dateStr,
                     "Operasi": formatTipeOperasi(d.tipeOperasi),
                     "Mode Game": d.mode === 'exam' ? 'Ujian' : 'Latihan',
                     "Waktu Total (detik)": d.waktuTotal || 0,
@@ -763,12 +764,13 @@ if (els.btnBackupData) {
                     ? d.tanggal.toDate().toISOString()
                     : (d.tanggal ? new Date(d.tanggal).toISOString() : '-');
                 remedialData.push({
+                    "Tipe Ujian": "Remedial",
                     "ID Dokumen": docSnap.id,
                     "Nama Siswa": d.nama || '',
                     "Kelas": d.kelasRaw || '',
                     "Kategori Kelas": d.kelasKategori || '',
                     "Skor / Nilai": d.skor !== undefined ? d.skor : 0,
-                    "Tanggal Ujian": dateStr,
+                    "Tanggal": dateStr,
                     "Operasi": formatTipeOperasi(d.tipeOperasi),
                     "Mode Game": d.mode === 'exam' ? 'Ujian' : 'Latihan',
                     "Waktu Total (detik)": d.waktuTotal || 0,
@@ -776,16 +778,37 @@ if (els.btnBackupData) {
                 });
             });
 
-            if (scoresData.length === 0 && remedialData.length === 0) {
+            // Consolidate both collections
+            const allData = [].concat(scoresData, remedialData);
+
+            if (allData.length === 0) {
                 showCleanupStatus("Tidak ada data hasil ujian untuk di-backup.", true);
                 return;
             }
 
+            // Sort all data by date descending (Newest First)
+            const sortByDateDesc = (a, b) => {
+                const timeA = new Date(a["Tanggal"]).getTime() || 0;
+                const timeB = new Date(b["Tanggal"]).getTime() || 0;
+                return timeB - timeA;
+            };
+            allData.sort(sortByDateDesc);
+            scoresData.sort(sortByDateDesc);
+            remedialData.sort(sortByDateDesc);
+
             // Create spreadsheet using SheetJS
             const wb = XLSX.utils.book_new();
+            
+            // Sheet 1: Semua Nilai (Consolidated) - Opens first by default!
+            const wsAll = XLSX.utils.json_to_sheet(allData);
+            XLSX.utils.book_append_sheet(wb, wsAll, "Semua Nilai");
+
+            // Sheet 2: Nilai Utama
             const wsScores = XLSX.utils.json_to_sheet(scoresData);
-            const wsRemedial = XLSX.utils.json_to_sheet(remedialData);
             XLSX.utils.book_append_sheet(wb, wsScores, "Nilai Utama");
+
+            // Sheet 3: Ujian Remedial
+            const wsRemedial = XLSX.utils.json_to_sheet(remedialData);
             XLSX.utils.book_append_sheet(wb, wsRemedial, "Ujian Remedial");
 
             const fileName = `jagoangka_backup_${new Date().toISOString().slice(0, 10)}.xlsx`;
