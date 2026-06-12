@@ -64,6 +64,11 @@
             box-shadow: 0 25px 50px -12px var(--glass-shadow);
             text-shadow: var(--glass-text-shadow);
         }
+
+        /* Fallback class to prevent content flash / layout breakdown on slow networks */
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
 
