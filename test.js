@@ -1,3 +1,7 @@
+const document = { getElementById: (id) => ({ classList: { add: ()=>{}, remove: ()=>{} }, style: {}, textContent: "", addEventListener: ()=>{} }), addEventListener: ()=>{}, documentElement: { classList: { remove: ()=>{}, add: ()=>{} } } };
+const localStorage = { getItem: ()=>null, setItem: ()=>{} };
+const Audio = function() { this.play = ()=>Promise.resolve(); };
+const window = { addEventListener: ()=>{} };
 // Math Mastery - Logic Script
 
 /**
@@ -96,7 +100,6 @@ const screens = {
     results: document.getElementById('screen-results'),
     modalMode: document.getElementById('modal-mode-select'),
     raport: document.getElementById('screen-raport'),
-    remedialRaport: document.getElementById('screen-remedial-raport'),
     modeSelection: document.getElementById('screen-mode-selection')
 };
 
@@ -320,20 +323,10 @@ window.cancelNewStudent = function() {
     if(els.inputNewPin) els.inputNewPin.removeAttribute('required');
 }
 
-function sanitizeStudentName(name) {
-    if (!name) return "";
-    return name.replace(/[\.\#\$\/\[\]]/g, " ").trim().replace(/\s+/g, " ");
-}
-
-function sanitizeClassName(className) {
-    if (!className) return "";
-    return className.replace(/[\.\#\$\/\[\]]/g, "-").replace(/\s+/g, "").toUpperCase();
-}
-
 async function appendNewStudentToFirebase(className, name, pin) {
     if (!className || !name) return;
-    const cleanClass = sanitizeClassName(className);
-    const cleanName = sanitizeStudentName(name);
+    const cleanClass = className.trim().toUpperCase();
+    const cleanName = name.trim();
     const cleanPin = pin ? pin.trim() : "1234";
     
     try {
@@ -372,8 +365,8 @@ function init() {
         let pin = '';
         
         if (els.loginManualMode && !els.loginManualMode.classList.contains('hidden')) {
-            name = sanitizeStudentName(els.inputName.value);
-            className = sanitizeClassName(els.inputClass.value);
+            name = els.inputName.value;
+            className = els.inputClass.value;
             pin = els.inputNewPin.value || "1234";
             if (pin.length < 4) {
                 alert("PIN harus terdiri dari minimal 4 angka!");
@@ -569,38 +562,8 @@ function saveUser(name, className, pin) {
     updateGreeting();
 }
 
-function getInitials(name) {
-    if (!name) return '--';
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) {
-        return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    if (parts.length === 1 && parts[0].length > 0) {
-        return parts[0].substring(0, Math.min(2, parts[0].length)).toUpperCase();
-    }
-    return '--';
-}
-
 function updateGreeting() {
-    const name = state.user.name || 'Siswa';
-    const className = state.user.class || '';
-    const greetingText = className ? `Halo, ${name} - ${className}` : `Halo, ${name}`;
-    
-    // Update all greeting placeholders
-    if (els.greeting) els.greeting.textContent = greetingText;
-    
-    const greetingMobileMode = document.getElementById('user-greeting-mobile-mode');
-    if (greetingMobileMode) greetingMobileMode.textContent = greetingText;
-    
-    const greetingMobileMenu = document.getElementById('user-greeting-mobile-menu');
-    if (greetingMobileMenu) greetingMobileMenu.textContent = greetingText;
-    
-    // Update avatar initials
-    const initials = getInitials(state.user.name);
-    const avatars = document.querySelectorAll('.user-avatar');
-    avatars.forEach(avatar => {
-        avatar.textContent = initials;
-    });
+    els.greeting.textContent = `Halo, ${state.user.name} - ${state.user.class}`;
 }
 
 /**
@@ -855,197 +818,6 @@ function downloadRaportPDF() {
     window.print();
 }
 window.downloadRaportPDF = downloadRaportPDF;
-
-function showRemedialRaportScreen() {
-    screens.remedialRaport.classList.remove('hidden');
-}
-
-function closeRemedialRaport() {
-    screens.remedialRaport.classList.add('hidden');
-}
-window.closeRemedialRaport = closeRemedialRaport;
-
-async function showRemedialRaport(type = 'integer') {
-    if (!state.user.name || !state.user.class) {
-        showToast("Error: Identitas siswa tidak ditemukan.", "error");
-        return;
-    }
-
-    showToast("Mengambil data ujian remedial...", "info");
-
-    try {
-        const name = state.user.name;
-        const className = state.user.class;
-
-        if (!window.firebaseDb) {
-            throw new Error("Firebase tidak terinisialisasi.");
-        }
-
-        const collectionRef = window.firebaseCollection(window.firebaseDb, 'remedial_exams');
-        const q = window.firebaseQuery(
-            collectionRef,
-            window.firebaseWhere("nama", "==", name),
-            window.firebaseWhere("kelasRaw", "==", className)
-        );
-
-        const querySnapshot = await window.firebaseGetDocs(q);
-        const exams = [];
-        querySnapshot.forEach(doc => {
-            exams.push(doc.data());
-        });
-
-        // Determine operations to show based on type
-        let targetOps = [];
-        let opTitles = {};
-        let subjectTitle = '';
-        let subjectDesc = '';
-
-        if (type === 'decimal') {
-            targetOps = ['decimal_add', 'decimal_subtract', 'decimal_multiply', 'decimal_divide'];
-            opTitles = {
-                decimal_add: { title: 'Penjumlahan Desimal', color: 'text-brand-accent' },
-                decimal_subtract: { title: 'Pengurangan Desimal', color: 'text-indigo-400' },
-                decimal_multiply: { title: 'Perkalian Desimal', color: 'text-brand-primary' },
-                decimal_divide: { title: 'Pembagian Desimal', color: 'text-brand-secondary' }
-            };
-            subjectTitle = 'Matematika (Bilangan Desimal)';
-            subjectDesc = 'Rekapitulasi nilai hasil ujian remedial untuk operasi Penjumlahan, Pengurangan, Perkalian, dan Pembagian Desimal.';
-        } else {
-            targetOps = ['multiply', 'divide', 'add', 'subtract'];
-            opTitles = {
-                multiply: { title: 'Perkalian', color: 'text-brand-primary' },
-                divide: { title: 'Pembagian', color: 'text-brand-secondary' },
-                add: { title: 'Penjumlahan', color: 'text-brand-accent' },
-                subtract: { title: 'Pengurangan', color: 'text-indigo-400' }
-            };
-            subjectTitle = 'Matematika (Bilangan Bulat)';
-            subjectDesc = 'Rekapitulasi nilai hasil ujian remedial untuk operasi Perkalian, Pembagian, Penjumlahan, dan Pengurangan.';
-        }
-
-        // Group operations
-        const ops = {};
-        targetOps.forEach(op => {
-            ops[op] = [];
-        });
-
-        exams.forEach(ex => {
-            const op = ex.tipeOperasi;
-            if (ops[op] !== undefined) {
-                ops[op].push(ex);
-            }
-        });
-
-        // Sort each operation by date descending and take top 3
-        const resultGroup = {};
-        for (const op of targetOps) {
-            ops[op].sort((a, b) => {
-                const timeA = a.tanggal && typeof a.tanggal.toDate === 'function' ? a.tanggal.toDate().getTime() : (a.tanggal ? new Date(a.tanggal).getTime() : 0);
-                const timeB = b.tanggal && typeof b.tanggal.toDate === 'function' ? b.tanggal.toDate().getTime() : (b.tanggal ? new Date(b.tanggal).getTime() : 0);
-                return timeB - timeA;
-            });
-            resultGroup[op] = ops[op].slice(0, 3);
-        }
-
-        // Render to UI
-        const nameEl = document.getElementById('remedial-raport-name');
-        const classEl = document.getElementById('remedial-raport-class');
-        const dateEl = document.getElementById('remedial-raport-date');
-        const gridEl = document.getElementById('remedial-raport-grid');
-        const subjectEl = document.getElementById('remedial-raport-subject');
-        const descEl = document.getElementById('remedial-raport-desc');
-
-        if (nameEl) nameEl.textContent = name;
-        if (classEl) classEl.textContent = className;
-        if (dateEl) dateEl.textContent = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-        if (subjectEl) subjectEl.textContent = subjectTitle;
-        if (descEl) descEl.textContent = subjectDesc;
-
-        if (gridEl) {
-            gridEl.innerHTML = '';
-            
-            for (const op of targetOps) {
-                const list = resultGroup[op];
-                const info = opTitles[op];
-
-                const card = document.createElement('div');
-                card.className = "bg-brand-dark/40 border border-brand-border rounded-xl p-5 flex flex-col gap-3 min-h-[160px]";
-                
-                let contentHTML = `
-                    <h4 class="font-bold text-brand-text border-b border-brand-border/50 pb-2 flex items-center justify-between">
-                        <span>${info.title}</span>
-                        <span class="text-xs ${info.color} font-bold uppercase tracking-wider">3 Terakhir</span>
-                    </h4>
-                `;
-
-                if (list.length === 0) {
-                    contentHTML += `
-                        <div class="flex-1 flex items-center justify-center py-6">
-                            <p class="text-brand-text-muted text-sm italic">Belum ada riwayat ujian</p>
-                        </div>
-                    `;
-                } else {
-                    contentHTML += `
-                        <table class="w-full text-xs text-left border-collapse">
-                            <thead>
-                                <tr class="text-brand-text-muted border-b border-brand-border/30 uppercase tracking-wider font-semibold">
-                                    <th class="py-2">Tanggal</th>
-                                    <th class="py-2">Waktu Rerata</th>
-                                    <th class="py-2 text-right">Nilai</th>
-                                </tr>
-                            </thead>
-                            <tbody class="text-brand-text font-medium">
-                    `;
-
-                    list.forEach(ex => {
-                        const dateStr = ex.tanggal && typeof ex.tanggal.toDate === 'function' 
-                            ? ex.tanggal.toDate().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' }) 
-                            : (ex.tanggal ? new Date(ex.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' }) : '-');
-                        
-                        let normalizedScore = ex.skor;
-                        if (normalizedScore > 100) {
-                            normalizedScore = Math.round(normalizedScore / 5);
-                        }
-                        
-                        const avgTimeStr = ex.waktuRataRata ? `${parseFloat(ex.waktuRataRata).toFixed(1)}s` : '-';
-
-                        contentHTML += `
-                            <tr class="border-b border-brand-border/20 last:border-0 hover:bg-brand-surface/30">
-                                <td class="py-2">${dateStr}</td>
-                                <td class="py-2">${avgTimeStr}</td>
-                                <td class="py-2 text-right font-bold ${info.color}">${normalizedScore}</td>
-                            </tr>
-                        `;
-                    });
-
-                    contentHTML += `
-                            </tbody>
-                        </table>
-                    `;
-                }
-
-                card.innerHTML = contentHTML;
-                gridEl.appendChild(card);
-            }
-        }
-
-        // Close select modal
-        if (type === 'decimal') {
-            closeDecimalSelect();
-        } else {
-            closeIntegerSelect();
-        }
-
-        // Show remedial raport screen
-        showRemedialRaportScreen();
-        
-        showToast("Raport remedial berhasil dimuat!", "success");
-
-    } catch (error) {
-        console.error("Gagal memuat raport remedial:", error);
-        showToast("Gagal mengambil data dari server.", "error");
-    }
-}
-window.showRemedialRaport = showRemedialRaport;
 
 function showLeaderboardScreen() {
     hideAllScreens();
@@ -2034,9 +1806,9 @@ function renderLeaderboardItem(data, rank) {
     const listEl = els.leaderboardList;
 
     // Style for Top 3
-    let rankBadge = `<div class="w-8 h-8 rounded-full bg-brand-surface border border-brand-border text-brand-text-muted flex items-center justify-center font-bold text-sm text-center">${rank}</div>`;
-    let rowBg = 'bg-brand-surface/40';
-    let border = 'border-brand-border/50';
+    let rankBadge = `<div class="w-8 h-8 rounded-full bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-sm text-center">${rank}</div>`;
+    let rowBg = 'bg-slate-800/30';
+    let border = 'border-slate-800';
     let scaleEffect = 'hover:scale-[1.01]';
     let icon = '';
 
@@ -2079,12 +1851,12 @@ function renderLeaderboardItem(data, rank) {
     item.innerHTML = `
         <div class="mr-4">${rankBadge}</div>
         <div class="flex-1">
-            <div class="font-bold text-brand-text text-lg truncate">${data.nama}</div>
-            <div class="text-xs text-brand-text-muted font-mono">${data.kelasRaw || data.kelasKategori} • ${data.tipeOperasi.toUpperCase()}</div>
+            <div class="font-bold text-white text-lg truncate">${data.nama}</div>
+            <div class="text-xs text-slate-400 font-mono">${data.kelasRaw || data.kelasKategori} • ${data.tipeOperasi.toUpperCase()}</div>
         </div>
         <div class="text-right">
             <div class="font-bold text-brand-primary text-xl">${data.skor}</div>
-            <div class="text-xs text-brand-text-muted">${data.waktuRataRata.toFixed(2)}s / soal</div>
+            <div class="text-xs text-slate-500">${data.waktuRataRata.toFixed(2)}s / soal</div>
         </div>
     `;
 
@@ -2325,20 +2097,20 @@ function renderHistory() {
         let normalizedScore = Math.round((item.score / maxScore) * 100);
 
         const el = document.createElement('div');
-        el.className = 'bg-brand-surface/40 border border-brand-border/50 rounded-xl p-4 flex justify-between items-center animate-fade-in';
+        el.className = 'bg-brand-surface/40 border border-slate-700/50 rounded-xl p-4 flex justify-between items-center animate-fade-in';
         el.innerHTML = `
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-slate-900 ${normalizedScore >= 80 ? 'bg-brand-accent' : normalizedScore >= 60 ? 'bg-brand-primary' : 'bg-slate-500'}">
                     ${getGrade(item.score, maxScore).charAt(0)}
                 </div>
                 <div>
-                    <div class="font-bold text-brand-text text-sm">${modeLabel} <span class="text-xs font-normal text-brand-text-muted bg-brand-surface px-2 py-0.5 rounded-full ml-1 border border-brand-border">${typeLabel}</span></div>
-                    <div class="text-xs text-brand-text-muted">${date}</div>
+                    <div class="font-bold text-white text-sm">${modeLabel} <span class="text-xs font-normal text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full ml-1 border border-slate-700">${typeLabel}</span></div>
+                    <div class="text-xs text-slate-400">${date}</div>
                 </div>
             </div>
             <div class="text-right">
-                <div class="font-bold text-brand-text">${item.score} <span class="text-xs font-normal text-brand-text-muted">/${maxScore}</span></div>
-                <div class="text-xs text-brand-text-muted">${formatDuration(item.duration)}</div>
+                <div class="font-bold text-white">${item.score} <span class="text-xs font-normal text-slate-500">/${maxScore}</span></div>
+                <div class="text-xs text-slate-500">${formatDuration(item.duration)}</div>
             </div>
         `;
         els.historyList.appendChild(el);
@@ -2581,7 +2353,7 @@ function updateThemeIcon(isLight) {
     if (isLight) {
         // Light Mode -> Show Moon (switch to Dark)
         els.btnTheme.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
             </svg>
         `;
@@ -2591,7 +2363,7 @@ function updateThemeIcon(isLight) {
     } else {
         // Dark Mode -> Show Sun (switch to Light)
         els.btnTheme.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
         `;
@@ -2731,14 +2503,6 @@ function renderActivityChart() {
 
 // Integer Mode Functions
 function showIntegerModeSelect() {
-    const btnRemedialRaport = document.getElementById('btn-lihat-raport-remedial');
-    if (btnRemedialRaport) {
-        if (state.appMode === 'remedial') {
-            btnRemedialRaport.classList.remove('hidden');
-        } else {
-            btnRemedialRaport.classList.add('hidden');
-        }
-    }
     document.getElementById('modal-integer-select').classList.remove('hidden');
 }
 
@@ -2753,14 +2517,6 @@ function selectIntegerOp(op) {
 
 // Decimal Mode Functions
 function showDecimalModeSelect() {
-    const btnRemedialRaportDec = document.getElementById('btn-lihat-raport-remedial-desimal');
-    if (btnRemedialRaportDec) {
-        if (state.appMode === 'remedial') {
-            btnRemedialRaportDec.classList.remove('hidden');
-        } else {
-            btnRemedialRaportDec.classList.add('hidden');
-        }
-    }
     document.getElementById('modal-decimal-select').classList.remove('hidden');
 }
 
@@ -2859,3 +2615,14 @@ window.submitChangePin = async function() {
 
 // Start
 init();
+
+
+// Start a game
+try {
+  state.selectedModeOp = "multiply";
+  initGame("multiply", "practice");
+  console.log("Init done, q:", state.game.questions[0].q);
+  state.game.currentAnswer = state.game.questions[0].a.toString();
+  submitAnswer();
+  console.log("Score after correct:", state.game.score);
+} catch (e) { console.error("ERROR:", e.stack); }

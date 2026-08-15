@@ -332,8 +332,20 @@
                 <div id="login-manual-mode" class="hidden">
                     <div class="mb-4">
                         <label for="input-class" class="block text-sm font-medium text-brand-text-muted mb-1 ml-1">Kelas</label>
-                        <input type="text" id="input-class" placeholder="Contoh: 7A"
-                            class="w-full bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text placeholder-slate-500 outline-none transition-all">
+                        <select id="input-class"
+                            class="w-full bg-brand-surface/50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary rounded-xl px-4 py-3 text-brand-text outline-none transition-all appearance-none cursor-pointer">
+                            <option value="" disabled selected class="bg-slate-800 text-slate-400">Pilih Kelas</option>
+                            <option value="7A" class="bg-slate-800 text-white">7A</option>
+                            <option value="7B" class="bg-slate-800 text-white">7B</option>
+                            <option value="8A" class="bg-slate-800 text-white">8A</option>
+                            <option value="8B" class="bg-slate-800 text-white">8B</option>
+                            <option value="8C" class="bg-slate-800 text-white">8C</option>
+                            <option value="9A" class="bg-slate-800 text-white">9A</option>
+                            <option value="9B" class="bg-slate-800 text-white">9B</option>
+                            <option value="10" class="bg-slate-800 text-white">10</option>
+                            <option value="11" class="bg-slate-800 text-white">11</option>
+                            <option value="12" class="bg-slate-800 text-white">12</option>
+                        </select>
                     </div>
                     <div>
                         <label for="input-name" class="block text-sm font-medium text-brand-text-muted mb-1 ml-1">Nama Lengkap</label>
