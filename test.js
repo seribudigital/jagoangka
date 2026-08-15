@@ -248,11 +248,12 @@ async function fetchStudentList() {
     }
 }
 
+const ALLOWED_CLASSES = ['7A', '7B', '8A', '8B', '8C', '9A', '9B', '10', '11', '12'];
+
 function populateClassDropdown() {
     if (!els.selectClass) return;
     els.selectClass.innerHTML = '<option value="" disabled selected>Pilih Kelas</option>';
-    const classes = Object.keys(appStudentList).sort();
-    classes.forEach(c => {
+    ALLOWED_CLASSES.forEach(c => {
         const opt = document.createElement('option');
         opt.value = c;
         opt.textContent = c;
